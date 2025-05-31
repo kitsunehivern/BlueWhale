@@ -1,0 +1,13 @@
+{
+    "name": "hoshinobot",
+    "version": "1.0.0",
+    "main": "index.js",
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "discord.js": "^14.19.3",
+        "dotenv": "^16.5.0"
+    }
+}
