@@ -2,30 +2,43 @@ import cron from "node-cron";
 import client from "../index.js";
 
 export class ReminderService {
-    constructor() {}
+    constructor() {
+        this.reminders = new Map();
+        this.reminderCounter = 0;
+    }
 
     setReminder(channelId, userId, reminderDetails) {
         try {
+            const reminderId = ++this.reminderCounter;
             const cronExpression = this.parseToCron(reminderDetails.when);
 
             if (!cronExpression) {
                 return false;
             }
 
-            cron.schedule(
+            const task = cron.schedule(
                 cronExpression,
                 () => {
                     this.sendReminder(channelId, userId, reminderDetails);
                 },
                 {
                     timezone: "Etc/UTC",
+                    scheduled: false,
                 }
             );
 
-            return true;
+            this.reminders.set(reminderId, {
+                task,
+                channelId,
+                userId,
+                details: reminderDetails,
+            });
+
+            task.start();
+            return reminderId;
         } catch (error) {
             console.error("Error setting reminder:", error);
-            return false;
+            return -1;
         }
     }
 
@@ -41,7 +54,28 @@ export class ReminderService {
     }
 
     async sendReminder(channelId, userId, reminderDetails) {
-        const channel = client.channels.cache.get(channelId);
-        channel.send(`<@${userId}> ${reminderDetails.reminder}`);
+        try {
+            const channel = client.channels.cache.get(channelId);
+            channel.send(`<@${userId}> ${reminderDetails.reminderText}`);
+        } catch (error) {
+            console.error("Error sending reminder:", error);
+        }
+    }
+
+    cancelReminder(userId, reminderId) {
+        const reminder = this.reminders.get(reminderId);
+        if (!reminder) {
+            console.log("Reminder does not exist");
+            return -1;
+        }
+
+        if (reminder.userId != userId) {
+            console.log("Reminder does not belong to user");
+            return 1;
+        }
+
+        reminder.task.stop();
+        this.reminders.delete(reminderId);
+        return 0;
     }
 }

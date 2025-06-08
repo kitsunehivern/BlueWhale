@@ -45,13 +45,14 @@ export class MessageHandler {
             let prompt = await handler.handle(botMessage);
 
             if (prompt === null) {
-                prompt = "Tell that you're unavailable or the operation failed";
+                prompt =
+                    "Tell that you're unavailable right now and cannot complete the action";
             }
 
             const chat = this.aiService.startChat({
                 history: this.historyService.getHistory(botMessage.channelId)
                     .messages,
-                tools: [{ google_search: {} }],
+                // tools: [{ google_search: {} }],
             });
 
             const result = await chat.sendMessage(prompt);

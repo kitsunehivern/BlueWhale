@@ -12,34 +12,61 @@ export class ReminderHandler {
             );
 
             if (!reminderDetails) {
-                return "Ask for the specific time of the reminder";
+                throw Error("Cannot extract reminder details");
             }
 
-            const now = new Date(botMessage.timestamp);
-            const reminderTime = reminderDetails.when;
-            const oneDayMs = 24 * 60 * 60 * 1000;
+            if (reminderDetails.type === "add") {
+                if (reminderDetails.when === null) {
+                    return "Ask for the specific time of the reminder";
+                }
 
-            if (reminderTime.getTime() < now.getTime()) {
-                return "Tell that the reminder time is in the past and ask for a valid future time";
-            }
+                reminderDetails.when = new Date(reminderDetails.when);
 
-            if (reminderTime.getTime() - now.getTime() > oneDayMs) {
-                return "Tell that the reminder time is too far in the future (over one day) and ask for a closer time";
-            }
+                const now = new Date(botMessage.timestamp);
+                const reminderTime = reminderDetails.when;
+                const oneDayMs = 24 * 60 * 60 * 1000;
 
-            const success = await this.reminderService.setReminder(
-                botMessage.channelId,
-                botMessage.author.id,
-                reminderDetails
-            );
+                if (reminderTime.getTime() < now.getTime()) {
+                    return "Tell that the reminder time is in the past and ask for a valid future time";
+                }
 
-            if (success) {
-                const reminderTimestamp = Math.floor(
-                    reminderDetails.when.getTime() / 1000
+                if (reminderTime.getTime() - now.getTime() > oneDayMs) {
+                    return "Tell that the reminder time is too far in the future (over one day) and ask for a closer time";
+                }
+
+                const reminderId = await this.reminderService.setReminder(
+                    botMessage.channelId,
+                    botMessage.author.id,
+                    reminderDetails
                 );
-                return `Tell that the reminder about ${reminderDetails.content} is set at <t:${reminderTimestamp}:F> (absoulute time), which is <t:${reminderTimestamp}:R> (relative time). All the information about the time must be included in the response in given Discord format.`;
+
+                if (reminderId !== -1) {
+                    const reminderTimestamp = Math.floor(
+                        reminderDetails.when.getTime() / 1000
+                    );
+                    return `Tell that the reminder about ${reminderDetails.content} is set with ID \`${reminderId}\` at <t:${reminderTimestamp}:F> (this is the absoulute time), which is <t:${reminderTimestamp}:R> (this is the relative time). All the information about the time must be included in the response in given Discord format and do not include the text in the parenthesis. The user can cancel the reminder using the reminder ID`;
+                } else {
+                    return null;
+                }
+            } else if (reminderDetails.type === "cancel") {
+                if (reminderDetails.reminderId === null) {
+                    return "Ask for the specific ID of the reminder";
+                }
+
+                const code = await this.reminderService.cancelReminder(
+                    botMessage.author.id,
+                    reminderDetails.reminderId
+                );
+
+                if (code == -1) {
+                    return "Tell that the reminder does not exist";
+                } else if (code == 1) {
+                    return "Tell that the reminder is not yours";
+                } else {
+                    return `Tell that the reminder with ID \`${reminderDetails.reminderId}\` has been canceled`;
+                }
             } else {
-                return null;
+                return `Tell that the action on the reminder is unknown`;
             }
         } catch (error) {
             console.error("Error in ReminderHandler:", error);
@@ -50,21 +77,23 @@ export class ReminderHandler {
     async extractReminderDetails(botMessage) {
         try {
             const prompt = `
-Extract reminder details from the history and this message in the following JSON format:
+Extract reminder details from the history and this message and return them in the following JSON format:
 {
-    "content": what to remind about (if not specified, just return "reminder"),
+    "type": "add" or "cancel",
+    "content" (if type is "add"): what to remind about (if not specified, just return "reminder"),
     "when": when to remind (absolute time with ISO format like "2025-06-06T00:00:00.000Z" in UTC+0), the current time is ${new Date(
         botMessage.timestamp
     ).toISOString()} in UTC+0. If user input a specific time without their local time, assume it's in **UTC+7**. If the user did not specify the time, simply return null,
-    "reminder": The reminder text to send at the reminder time, including your persona in the message.
+    "reminderText" (if type is "add"): The text to display at the reminder time. Include your persona in the message, as this will be shown to the user when the reminder activates. For example, "Uhe~ Time to sleep, just like Oji-san! Don't forget to rest, Sensei~",
+    "reminderId" (if type is "cancel"): An positive integer that defines the reminder. If the user did not specify the id, simply return null
 }
 
 Message: "${botMessage.getCleanContent()}"
 
-If you can't extract clear reminder details, return null.
+Do not include anything else except the JSON object. **The JSON must be valid**.
             `;
 
-            let result = await this.aiService.generateContent({
+            const result = await this.aiService.generateContent({
                 contents: [
                     this.historyService.getHistory(botMessage.channelId)
                         .messages,
@@ -72,22 +101,29 @@ If you can't extract clear reminder details, return null.
                 ],
             });
 
-            let response = result.response.text().trim();
+            let response = result.response.text();
 
-            if (response.startsWith("```") && response.endsWith("```")) {
-                const lines = response.split("\n");
-                lines.shift();
-                lines.pop();
-                response = lines.join("\n");
+            const lines = response.split("\n");
+            const firstCodeLine = lines.findIndex((line) =>
+                line.trim().startsWith("```")
+            );
+            const lastCodeLine =
+                lines.length -
+                1 -
+                [...lines]
+                    .reverse()
+                    .findIndex((line) => line.trim().startsWith("```"));
+            if (
+                firstCodeLine !== -1 &&
+                lastCodeLine !== -1 &&
+                firstCodeLine < lastCodeLine
+            ) {
+                response = lines
+                    .slice(firstCodeLine + 1, lastCodeLine)
+                    .join("\n");
             }
 
-            result = JSON.parse(response);
-            if (result.when === null) {
-                return null;
-            }
-
-            result.when = new Date(result.when);
-            return result;
+            return JSON.parse(response);
         } catch (error) {
             console.error("Error extracting reminder details:", error);
             return null;
