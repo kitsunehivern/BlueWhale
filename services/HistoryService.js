@@ -32,7 +32,7 @@ export class HistoryService {
 
         history.timeout = setTimeout(() => {
             this.histories.delete(channelId);
-        }, 3600_000);
+        }, 86_400_000);
     }
 
     getHistory(channelId) {

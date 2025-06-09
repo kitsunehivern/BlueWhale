@@ -24,14 +24,14 @@ export class ReminderHandler {
 
                 const now = new Date(botMessage.timestamp);
                 const reminderTime = reminderDetails.when;
-                const oneDayMs = 24 * 60 * 60 * 1000;
+                const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
                 if (reminderTime.getTime() < now.getTime()) {
                     return "Tell that the reminder time is in the past and ask for a valid future time";
                 }
 
-                if (reminderTime.getTime() - now.getTime() > oneDayMs) {
-                    return "Tell that the reminder time is too far in the future (over one day) and ask for a closer time";
+                if (reminderTime.getTime() - now.getTime() > oneWeekMs) {
+                    return "Tell that the reminder time is too far in the future (over one week) and ask for a closer time";
                 }
 
                 const reminderId = await this.reminderService.setReminder(

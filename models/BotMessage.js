@@ -98,11 +98,7 @@ export class BotMessage {
     }
 
     _cleanContent(content) {
-        return content
-            .replace(/<@!?\d+>/g, "") // Remove user mentions
-            .replace(/<@&\d+>/g, "") // Remove role mentions
-            .replace(/<#\d+>/g, "") // Remove channel mentions
-            .trim();
+        return content.trim();
     }
 
     toAIFormat() {

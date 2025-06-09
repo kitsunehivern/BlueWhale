@@ -32,7 +32,7 @@ client.once("ready", () => {
 
             channel.send({
                 content:
-                    "<@433996834067972098> Uhe~ Sensei, don't forget to wake me up.",
+                    "<@433996834067972098> Uhe~ Sensei, don't forget to [wake me up](https://panel.fps.ms/server/8c4704b0).",
                 allowedMentions: { parse: ["users"] },
             });
         },
