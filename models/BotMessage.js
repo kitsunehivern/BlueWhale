@@ -5,6 +5,7 @@ export class BotMessage {
         this.id = discordMessage.id;
         this.content = discordMessage.content;
         this.channelId = discordMessage.channelId;
+        this.channelName = discordMessage.channel.name;
         this.guildId = discordMessage.guildId;
         this.author = {
             id: discordMessage.author.id,
@@ -22,24 +23,33 @@ export class BotMessage {
 
         this._originalMessage = discordMessage;
 
-        this.images = null;
-        this.attachments = this._processAttachments(discordMessage.attachments);
+        this.attachments = null;
+        this.links = null;
         this.cleanContent = this._cleanContent(discordMessage.content);
     }
 
-    async loadImages() {
-        if (this.images === null) {
-            this.images = await MessageUtils.getImages(this._originalMessage);
+    async loadAttachments() {
+        if (this.attachments === null) {
+            this.attachments = await MessageUtils.getAttachments(
+                this._originalMessage
+            );
         }
-        return this.images;
+        return this.attachments;
     }
 
-    getImages() {
-        return this.images || [];
+    loadLinks() {
+        if (this.links === null) {
+            this.links = MessageUtils.getLinks(this._originalMessage);
+        }
+        return this.links;
     }
 
-    hasImages() {
-        return this.attachments.some((att) => att.type === "image");
+    getAttachments() {
+        return this.attachments || [];
+    }
+
+    getLinks() {
+        return this.links || [];
     }
 
     getCleanContent() {
@@ -98,6 +108,7 @@ export class BotMessage {
     }
 
     _cleanContent(content) {
+        content = content.trim();
         return content.trim();
     }
 
@@ -106,20 +117,28 @@ export class BotMessage {
             role: "user",
             parts: [
                 { text: this.content },
-                ...this.getImages().map((img) => ({
+                ...this.getAttachments().map((item) => ({
                     inlineData: {
-                        data: img.data,
-                        mimeType: img.type,
+                        data: item.data,
+                        mimeType: item.type,
                     },
                 })),
+                // no using links in history for now
+                // ...this.getLinks().map((link) => ({
+                //     fileData: {
+                //         fileUri: link.url,
+                //         mimeType: link.type,
+                //     },
+                // })),
             ],
         };
     }
 
     toString() {
-        return `Message(${this.author.username}: ${this.content.substring(
-            0,
-            50
-        )}...)`;
+        return `${this.channelName}/${this.author.username}: ${
+            this.content.length > 50
+                ? `${this.content.substring(0, 50)}...`
+                : this.content
+        }`;
     }
 }

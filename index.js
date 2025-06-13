@@ -1,6 +1,5 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
-import cron from "node-cron";
 import { MessageHandler } from "./handlers/MessageHandler.js";
 import { initializeServices } from "./services/index.js";
 import { BotMessage } from "./models/BotMessage.js";
@@ -23,23 +22,6 @@ const messageHandler = new MessageHandler(services);
 
 client.once("ready", () => {
     console.log(`Logged in as ${client.user.tag}`);
-
-    cron.schedule(
-        "0 0 12 * * *",
-        () => {
-            const channelId = "1378428602521223219";
-            const channel = client.channels.cache.get(channelId);
-
-            channel.send({
-                content:
-                    "<@433996834067972098> Uhe~ Sensei, don't forget to [wake me up](https://panel.fps.ms/server/8c4704b0).",
-                allowedMentions: { parse: ["users"] },
-            });
-        },
-        {
-            timezone: "Asia/Bangkok",
-        }
-    );
 });
 
 client.on("messageCreate", async (discordMessage) => {

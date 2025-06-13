@@ -2,7 +2,7 @@ import axios from "axios";
 import fs from "fs";
 
 export class MessageUtils {
-    static async getImages(message) {
+    static async getAttachments(message) {
         return await Promise.all(
             message.attachments.map(async (item) => {
                 const buffer = await axios.get(item.url, {
@@ -15,6 +15,17 @@ export class MessageUtils {
                 };
             })
         );
+    }
+
+    static getLinks(message) {
+        const urlRegex = /https?:\/\/[^\s]+/g;
+        const links = message.content.match(urlRegex) || [];
+        return links.map((link) => {
+            return {
+                url: link,
+                type: "website",
+            };
+        });
     }
 
     static splitMessage(message) {

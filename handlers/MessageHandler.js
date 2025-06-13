@@ -21,7 +21,8 @@ export class MessageHandler {
     async handleMessage(discordMessage) {
         const botMessage = new BotMessage(discordMessage);
         try {
-            await botMessage.loadImages();
+            await botMessage.loadAttachments();
+            botMessage.loadLinks();
             if (
                 botMessage.content.includes(
                     botMessage.getBotMentionPattern(
@@ -33,18 +34,13 @@ export class MessageHandler {
                 this.historyService.initHistory(botMessage.channelId);
             }
 
-            this.historyService.updateHistory(
-                botMessage.channelId,
-                botMessage.toAIFormat()
-            );
-
             const intent = await this.classifier.classifyMessage(botMessage);
             console.log(`[${intent}] ${botMessage}`);
 
             const handler = this.handlers[intent] || this.handlers.chat;
             let prompt = await handler.handle(botMessage);
 
-            if (prompt === null) {
+            if (prompt === null || prompt.trim() === "") {
                 prompt =
                     "Tell that you're unavailable right now and cannot complete the action";
             }
@@ -52,11 +48,16 @@ export class MessageHandler {
             const chat = this.aiService.startChat({
                 history: this.historyService.getHistory(botMessage.channelId)
                     .messages,
-                // tools: [{ google_search: {} }],
+                tools: [{ google_search: {} }],
             });
 
             const result = await chat.sendMessage(prompt);
             const response = result.response.text();
+
+            this.historyService.updateHistory(
+                botMessage.channelId,
+                botMessage.toAIFormat()
+            );
 
             this.historyService.updateHistory(botMessage.channelId, {
                 role: "model",

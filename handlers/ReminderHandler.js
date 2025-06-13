@@ -61,7 +61,7 @@ export class ReminderHandler {
                 if (code == -1) {
                     return "Tell that the reminder does not exist";
                 } else if (code == 1) {
-                    return "Tell that the reminder is not yours";
+                    return "Tell that the reminder is not set by the user and cannot be canceled";
                 } else {
                     return `Tell that the reminder with ID \`${reminderDetails.reminderId}\` has been canceled`;
                 }

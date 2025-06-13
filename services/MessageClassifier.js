@@ -13,7 +13,7 @@ export class MessageClassifier {
             const prompt = `
 Classify the following message into one of these categories:
 - "question": Asking for information, explanations, or answers
-- "reminder": Setting up reminders, scheduling notifications, or time-based alerts
+- "reminder": Setting up or canceling reminders, scheduling notifications, or time-based alerts
 - "chat": General conversation, greetings, casual talk, or expressions
 
 Message: "${botMessage.content}"
@@ -21,21 +21,14 @@ Message: "${botMessage.content}"
 Respond with only the category name (question, reminder, or chat).
             `;
 
-            const parts = [
-                { text: prompt },
-                ...botMessage.images.map((img) => ({
-                    inlineData: {
-                        data: img.data,
-                        mimeType: img.type,
-                    },
-                })),
-            ];
-
             const result = await this.aiService.generateContent({
                 contents: [
                     this.historyService.getHistory(botMessage.channelId)
                         .messsages,
-                    { role: "user", parts: parts },
+                    {
+                        role: "user",
+                        parts: [{ text: prompt }],
+                    },
                 ],
             });
 
