@@ -112,24 +112,32 @@ export class BotMessage {
         return content.trim();
     }
 
+    getAIAttachments() {
+        return this.getAttachments().map((img) => ({
+            inlineData: {
+                data: img.data.data.toString("base64"),
+                mimeType: img.type,
+            },
+        }));
+    }
+
+    getAILinks() {
+        return this.getLinks().map((link) => ({
+            fileData: {
+                fileUri: link.url,
+                mimeType: link.type,
+            },
+        }));
+    }
+
     toAIFormat() {
         return {
             role: "user",
             parts: [
                 { text: this.content },
-                ...this.getAttachments().map((item) => ({
-                    inlineData: {
-                        data: item.data,
-                        mimeType: item.type,
-                    },
-                })),
+                ...this.getAIAttachments(),
                 // no using links in history for now
-                // ...this.getLinks().map((link) => ({
-                //     fileData: {
-                //         fileUri: link.url,
-                //         mimeType: link.type,
-                //     },
-                // })),
+                // ...this.getAILinks(),
             ],
         };
     }

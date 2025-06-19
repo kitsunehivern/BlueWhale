@@ -2,6 +2,8 @@ export class ChatHandler {
     constructor(services) {}
 
     async handle(botMessage) {
-        return `Respond to the message: ${botMessage.getCleanContent()}`;
+        return {
+            text: `Respond to the message: ${botMessage.getCleanContent()}`,
+        };
     }
 }

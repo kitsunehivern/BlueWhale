@@ -1,6 +1,6 @@
 export class ReminderHandler {
     constructor(services) {
-        this.aiService = services.aiService;
+        this.chatService = services.chatService;
         this.reminderService = services.reminderService;
         this.historyService = services.historyService;
     }
@@ -17,7 +17,9 @@ export class ReminderHandler {
 
             if (reminderDetails.type === "add") {
                 if (reminderDetails.when === null) {
-                    return "Ask for the specific time of the reminder";
+                    return {
+                        text: "Ask for the specific time of the reminder",
+                    };
                 }
 
                 reminderDetails.when = new Date(reminderDetails.when);
@@ -27,11 +29,15 @@ export class ReminderHandler {
                 const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
                 if (reminderTime.getTime() < now.getTime()) {
-                    return "Tell that the reminder time is in the past and ask for a valid future time";
+                    return {
+                        text: "Tell that the reminder time is in the past and ask for a valid future time",
+                    };
                 }
 
                 if (reminderTime.getTime() - now.getTime() > oneWeekMs) {
-                    return "Tell that the reminder time is too far in the future (over one week) and ask for a closer time";
+                    return {
+                        text: "Tell that the reminder time is too far in the future (over one week) and ask for a closer time",
+                    };
                 }
 
                 const reminderId = await this.reminderService.setReminder(
@@ -44,13 +50,15 @@ export class ReminderHandler {
                     const reminderTimestamp = Math.floor(
                         reminderDetails.when.getTime() / 1000
                     );
-                    return `Tell that the reminder about ${reminderDetails.content} is set with ID \`${reminderId}\` at <t:${reminderTimestamp}:F> (this is the absoulute time), which is <t:${reminderTimestamp}:R> (this is the relative time). All the information about the time must be included in the response in given Discord format and do not include the text in the parenthesis. The user can cancel the reminder using the reminder ID`;
+                    return {
+                        text: `Tell that the reminder about ${reminderDetails.content} is set with ID \`${reminderId}\` at <t:${reminderTimestamp}:F> (this is the absoulute time), which is <t:${reminderTimestamp}:R> (this is the relative time). All the information about the time must be included in the response in given Discord format and do not include the text in the parenthesis. The user can cancel the reminder using the reminder ID`,
+                    };
                 } else {
                     return null;
                 }
             } else if (reminderDetails.type === "cancel") {
                 if (reminderDetails.reminderId === null) {
-                    return "Ask for the specific ID of the reminder";
+                    return { text: "Ask for the specific ID of the reminder" };
                 }
 
                 const code = await this.reminderService.cancelReminder(
@@ -59,14 +67,20 @@ export class ReminderHandler {
                 );
 
                 if (code == -1) {
-                    return "Tell that the reminder does not exist";
+                    return { text: "Tell that the reminder does not exist" };
                 } else if (code == 1) {
-                    return "Tell that the reminder is not set by the user and cannot be canceled";
+                    return {
+                        text: "Tell that the reminder is not set by the user and cannot be canceled",
+                    };
                 } else {
-                    return `Tell that the reminder with ID \`${reminderDetails.reminderId}\` has been canceled`;
+                    return {
+                        text: `Tell that the reminder with ID \`${reminderDetails.reminderId}\` has been canceled`,
+                    };
                 }
             } else {
-                return `Tell that the action on the reminder is unknown`;
+                return {
+                    text: `Tell that the action on the reminder is unknown`,
+                };
             }
         } catch (error) {
             console.error("Error in ReminderHandler:", error);
@@ -93,7 +107,7 @@ Message: "${botMessage.getCleanContent()}"
 Do not include anything else except the JSON object. **The JSON must be valid**.
             `;
 
-            const result = await this.aiService.generateContent({
+            const result = await this.chatService.generateContent({
                 contents: [
                     this.historyService.getHistory(botMessage.channelId)
                         .messages,

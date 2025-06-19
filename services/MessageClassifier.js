@@ -1,47 +1,58 @@
 export class MessageClassifier {
     constructor(services) {
-        this.aiService = services.aiService;
+        this.chatService = services.chatService;
         this.historyService = services.historyService;
     }
 
     async classifyMessage(botMessage) {
-        return await this.aiClassify(botMessage);
+        return await this.#aiClassify(botMessage);
     }
 
-    async aiClassify(botMessage) {
-        try {
-            const prompt = `
-Classify the following message into one of these categories:
-- "question": Asking for information, explanations, or answers
-- "reminder": Setting up or canceling reminders, scheduling notifications, or time-based alerts
-- "chat": General conversation, greetings, casual talk, or expressions
+    async #aiClassify(botMessage) {
+        for (let i = 0; i < 3; i++) {
+            try {
+                const prompt = `
+    Classify the following message into one of these categories:
+    - "question": Asking for information, explanations, or answers
+    - "image": Find images based on the message content
+    - "reminder": Setting up or canceling reminders, scheduling notifications, or time-based alerts
+    - "chat": General conversation, greetings, casual talk, or expressions
 
-Message: "${botMessage.content}"
+    Message: "${botMessage.content}"
 
-Respond with only the category name (question, reminder, or chat).
-            `;
+    Respond with only the category name (question, image, reminder, or chat).
+                `;
 
-            const result = await this.aiService.generateContent({
-                contents: [
-                    this.historyService.getHistory(botMessage.channelId)
-                        .messsages,
-                    {
-                        role: "user",
-                        parts: [{ text: prompt }],
-                    },
-                ],
-            });
+                const result = await this.chatService.generateContent({
+                    contents: [
+                        this.historyService.getHistory(botMessage.channelId)
+                            .messsages,
+                        {
+                            role: "user",
+                            parts: [{ text: prompt }],
+                        },
+                    ],
+                });
 
-            const classification = result.response.text().trim().toLowerCase();
+                const classification = result.response
+                    .text()
+                    .trim()
+                    .toLowerCase();
 
-            if (["question", "reminder", "chat"].includes(classification)) {
-                return classification;
+                if (
+                    ["question", "image", "reminder", "chat"].includes(
+                        classification
+                    )
+                ) {
+                    return classification;
+                }
+
+                return "chat";
+            } catch (error) {
+                console.error("Error in AI classification:", error);
             }
-
-            return "chat";
-        } catch (error) {
-            console.error("Error in AI classification:", error);
-            return "chat";
         }
+
+        return "chat";
     }
 }

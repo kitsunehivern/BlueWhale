@@ -10,7 +10,7 @@ export class ReminderService {
     setReminder(channelId, userId, reminderDetails) {
         try {
             const reminderId = ++this.reminderCounter;
-            const cronExpression = this.parseToCron(reminderDetails.when);
+            const cronExpression = this.#parseToCron(reminderDetails.when);
 
             if (!cronExpression) {
                 return false;
@@ -42,7 +42,7 @@ export class ReminderService {
         }
     }
 
-    parseToCron(date) {
+    #parseToCron(date) {
         const second = date.getUTCSeconds();
         const minute = date.getUTCMinutes();
         const hour = date.getUTCHours();

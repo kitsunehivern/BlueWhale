@@ -1,34 +1,20 @@
 export class QuestionHandler {
     constructor(services) {
-        this.aiService = services.aiService;
+        this.chatService = services.chatService;
         this.historyService = services.historyService;
     }
 
     async handle(botMessage) {
-        const searchResult = await this.getInformation(botMessage);
+        const searchResult = await this.#getInformation(botMessage);
 
         const prompt = `
 Answer the following question based on the conversation history and any relevant information provided. If there is an error, return the error message. Question: ${botMessage.getCleanContent()}\n${searchResult}`;
 
-        return prompt;
+        return { text: prompt };
     }
 
-    async getInformation(botMessage) {
+    async #getInformation(botMessage) {
         const prompt = `Search for relevant information to answer this question. Return only factual information: "${botMessage.getCleanContent()}"`;
-
-        const attachmentParts = botMessage.getAttachments().map((img) => ({
-            inlineData: {
-                data: img.data,
-                mimeType: img.type,
-            },
-        }));
-
-        const linksParts = botMessage.getLinks().map((link) => ({
-            fileData: {
-                fileUri: link.url,
-                mimeType: link.type,
-            },
-        }));
 
         try {
             const contents = [
@@ -38,13 +24,13 @@ Answer the following question based on the conversation history and any relevant
                     role: "user",
                     parts: [
                         { text: prompt },
-                        ...attachmentParts,
-                        ...linksParts,
+                        ...botMessage.getAIAttachments(),
+                        ...botMessage.getAILinks(),
                     ],
                 },
             ];
 
-            const result = await this.aiService.generateContent({
+            const result = await this.chatService.generateContent({
                 contents: contents,
                 tools: [{ google_search: {} }],
             });

@@ -1,18 +1,22 @@
 import { MessageClassifier } from "../services/MessageClassifier.js";
 import { QuestionHandler } from "./QuestionHandler.js";
+import { ImageHandler } from "./ImageHandler.js";
 import { ReminderHandler } from "./ReminderHandler.js";
 import { ChatHandler } from "./ChatHandler.js";
 import { BotMessage } from "../models/BotMessage.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
+import { AttachmentBuilder } from "discord.js";
+import sharp from "sharp";
 
 export class MessageHandler {
     constructor(services) {
         this.classifier = new MessageClassifier(services);
-        this.aiService = services.aiService;
+        this.chatService = services.chatService;
         this.historyService = services.historyService;
 
         this.handlers = {
             question: new QuestionHandler(services),
+            image: new ImageHandler(services),
             reminder: new ReminderHandler(services),
             chat: new ChatHandler(services),
         };
@@ -40,18 +44,19 @@ export class MessageHandler {
             const handler = this.handlers[intent] || this.handlers.chat;
             let prompt = await handler.handle(botMessage);
 
-            if (prompt === null || prompt.trim() === "") {
-                prompt =
-                    "Tell that you're unavailable right now and cannot complete the action";
+            if (prompt === null || prompt.text.trim() === "") {
+                prompt = {
+                    text: "Tell that you're unavailable right now and cannot complete the action",
+                };
             }
 
-            const chat = this.aiService.startChat({
+            const chat = this.chatService.startChat({
                 history: this.historyService.getHistory(botMessage.channelId)
                     .messages,
                 tools: [{ google_search: {} }],
             });
 
-            const result = await chat.sendMessage(prompt);
+            const result = await chat.sendMessage(prompt.text);
             const response = result.response.text();
 
             this.historyService.updateHistory(
@@ -64,7 +69,7 @@ export class MessageHandler {
                 parts: [{ text: response }],
             });
 
-            await this.sendResponse(botMessage, response);
+            await this.sendResponse(botMessage, response, prompt.images);
         } catch (error) {
             console.error("Error handling message:", error);
             await this.sendResponse(
@@ -74,8 +79,33 @@ export class MessageHandler {
         }
     }
 
-    async sendResponse(botMessage, response) {
+    async sendResponse(botMessage, response, attachments = undefined) {
         const responseChunks = MessageUtils.formatMessage(response);
+        const discordAttachments = attachments
+            ? await Promise.all(
+                  attachments.map(async (att, i) => {
+                      const maxSize = 800;
+
+                      const metadata = await sharp(att.data).metadata();
+                      const { width, height } = metadata;
+
+                      const scale = Math.min(
+                          maxSize / width,
+                          maxSize / height,
+                          1
+                      );
+                      const newWidth = Math.round(width * scale);
+                      const newHeight = Math.round(height * scale);
+
+                      const resizedBuffer = await sharp(att.data)
+                          .resize(newWidth, newHeight)
+                          .toBuffer();
+                      return new AttachmentBuilder(resizedBuffer, {
+                          name: `image.png`,
+                      });
+                  })
+              )
+            : undefined;
 
         for (let i = 0; i < responseChunks.length; i++) {
             await botMessage.sendTyping();
@@ -84,9 +114,21 @@ export class MessageHandler {
             );
 
             if (i === 0) {
-                await botMessage.reply(responseChunks[i]);
+                if (i === responseChunks.length - 1 && discordAttachments) {
+                    await botMessage.reply(responseChunks[i], {
+                        files: discordAttachments,
+                    });
+                } else {
+                    await botMessage.reply(responseChunks[i]);
+                }
             } else {
-                await botMessage.send(responseChunks[i]);
+                if (i === responseChunks.length - 1 && discordAttachments) {
+                    await botMessage.send(currentResponse, {
+                        files: discordAttachments,
+                    });
+                } else {
+                    await botMessage.send(currentResponse);
+                }
             }
         }
     }

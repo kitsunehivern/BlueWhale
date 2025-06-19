@@ -1,5 +1,4 @@
 import axios from "axios";
-import fs from "fs";
 
 export class MessageUtils {
     static async getAttachments(message) {
@@ -10,7 +9,7 @@ export class MessageUtils {
                 });
 
                 return {
-                    data: buffer.data.toString("base64"),
+                    data: buffer,
                     type: item.contentType,
                 };
             })
