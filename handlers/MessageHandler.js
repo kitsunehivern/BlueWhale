@@ -113,22 +113,15 @@ export class MessageHandler {
                 Math.min(responseChunks[i].length * 10, 10000)
             );
 
+            const sendOptions =
+                i === responseChunks.length - 1 && discordAttachments
+                    ? { files: discordAttachments }
+                    : undefined;
+
             if (i === 0) {
-                if (i === responseChunks.length - 1 && discordAttachments) {
-                    await botMessage.reply(responseChunks[i], {
-                        files: discordAttachments,
-                    });
-                } else {
-                    await botMessage.reply(responseChunks[i]);
-                }
+                await botMessage.reply(responseChunks[i], sendOptions);
             } else {
-                if (i === responseChunks.length - 1 && discordAttachments) {
-                    await botMessage.send(currentResponse, {
-                        files: discordAttachments,
-                    });
-                } else {
-                    await botMessage.send(currentResponse);
-                }
+                await botMessage.send(responseChunks[i], sendOptions);
             }
         }
     }
