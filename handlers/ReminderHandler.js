@@ -26,11 +26,18 @@ export class ReminderHandler {
 
                 const now = new Date(botMessage.timestamp);
                 const reminderTime = reminderDetails.when;
+                const oneMinuteMs = 60 * 1000;
                 const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
 
-                if (reminderTime.getTime() < now.getTime()) {
+                if (reminderTime.getTime() - now.getTime() < 0) {
                     return {
                         text: "Tell that the reminder time is in the past and ask for a valid future time",
+                    };
+                }
+
+                if (reminderTime.getTime() - now.getTime() < oneMinuteMs) {
+                    return {
+                        text: "Tell that the reminder time is too close (less than one minute) and ask for a later time",
                     };
                 }
 

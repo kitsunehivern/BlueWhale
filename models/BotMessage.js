@@ -1,3 +1,4 @@
+import client from "../index.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
 
 export class BotMessage {
@@ -109,7 +110,11 @@ export class BotMessage {
 
     _cleanContent(content) {
         content = content.trim();
-        return content.trim();
+        if (content.startsWith(`<@${client.user.id}>`)) {
+            content = content.substring(`<@${client.user.id}>`.length).trim();
+        }
+
+        return content;
     }
 
     getAIAttachments() {
@@ -146,7 +151,7 @@ export class BotMessage {
         return `${this.channelName}/${this.author.username}: ${
             this.content.length > 50
                 ? `${this.content.substring(0, 50)}...`
-                : this.content
+                : this.cleanContent
         }`;
     }
 }
