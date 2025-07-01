@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SearchService } from "./SearchService.js";
 import { HistoryService } from "./HistoryService.js";
 import { ReminderService } from "./ReminderService.js";
+import { LeetcodeService } from "./LeetcodeService.js";
 import fs from "fs";
 
 export function initializeServices() {
@@ -19,6 +20,7 @@ export function initializeServices() {
     const searchService = new SearchService();
     const historyService = new HistoryService(personas);
     const reminderService = new ReminderService();
+    const leetcodeService = new LeetcodeService();
 
     return {
         chatService,
@@ -26,6 +28,7 @@ export function initializeServices() {
         searchService,
         historyService,
         reminderService,
+        leetcodeService,
         personas,
     };
 }

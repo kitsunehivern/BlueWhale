@@ -4,7 +4,7 @@ export class QuestionHandler {
         this.historyService = services.historyService;
     }
 
-    async handle(botMessage) {
+    async handle(botMessage, state = null) {
         const searchResult = await this.#getInformation(botMessage);
 
         const prompt = `

@@ -1,5 +1,3 @@
-import fs from "fs";
-
 export class ImageHandler {
     constructor(services) {
         this.chatService = services.chatService;
@@ -8,7 +6,7 @@ export class ImageHandler {
         this.historyService = services.historyService;
     }
 
-    async handle(botMessage) {
+    async handle(botMessage, state = null) {
         try {
             const searchQuery = await this.extractSearchQuery(botMessage);
             console.log(`Query extracted: ${searchQuery}`);

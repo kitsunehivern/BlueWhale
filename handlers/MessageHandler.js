@@ -2,6 +2,7 @@ import { MessageClassifier } from "../services/MessageClassifier.js";
 import { QuestionHandler } from "./QuestionHandler.js";
 import { ImageHandler } from "./ImageHandler.js";
 import { ReminderHandler } from "./ReminderHandler.js";
+import { RegisterHandler } from "./RegisterHandler.js";
 import { ChatHandler } from "./ChatHandler.js";
 import { BotMessage } from "../models/BotMessage.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
@@ -18,6 +19,7 @@ export class MessageHandler {
             question: new QuestionHandler(services),
             image: new ImageHandler(services),
             reminder: new ReminderHandler(services),
+            register: new RegisterHandler(services),
             chat: new ChatHandler(services),
         };
     }
@@ -41,35 +43,53 @@ export class MessageHandler {
             const intent = await this.classifier.classifyMessage(botMessage);
             console.log(`[${intent}] ${botMessage}`);
 
-            const handler = this.handlers[intent] || this.handlers.chat;
-            let prompt = await handler.handle(botMessage);
+            let state = null;
+            while (true) {
+                const handler = this.handlers[intent] || this.handlers.chat;
+                let result = await handler.handle(botMessage, state);
 
-            if (prompt === null || prompt.text.trim() === "") {
-                prompt = {
-                    text: "Tell that you're unavailable right now and cannot complete the action",
-                };
+                if (result === null || result.text.trim() === "") {
+                    result = {
+                        text: "Tell that you're unavailable right now and cannot complete the action",
+                    };
+                }
+
+                const chat = this.chatService.startChat({
+                    history: this.historyService.getHistory(
+                        botMessage.channelId
+                    ).messages,
+                });
+
+                const response = await chat.sendMessage(result.text);
+                const responseText = response.response.text();
+                const responseImages = result.images;
+
+                this.historyService.updateHistory(
+                    botMessage.channelId,
+                    botMessage.toAIFormat()
+                );
+
+                this.historyService.updateHistory(botMessage.channelId, {
+                    role: "model",
+                    parts: [{ text: responseText }],
+                });
+
+                await this.sendResponse(
+                    botMessage,
+                    responseText,
+                    responseImages
+                );
+
+                if (result.state) {
+                    state = result.state;
+                } else {
+                    break;
+                }
+
+                if (result.delay) {
+                    await MessageUtils.delay(result.delay);
+                }
             }
-
-            const chat = this.chatService.startChat({
-                history: this.historyService.getHistory(botMessage.channelId)
-                    .messages,
-                tools: [{ google_search: {} }],
-            });
-
-            const result = await chat.sendMessage(prompt.text);
-            const response = result.response.text();
-
-            this.historyService.updateHistory(
-                botMessage.channelId,
-                botMessage.toAIFormat()
-            );
-
-            this.historyService.updateHistory(botMessage.channelId, {
-                role: "model",
-                parts: [{ text: response }],
-            });
-
-            await this.sendResponse(botMessage, response, prompt.images);
         } catch (error) {
             console.error("Error handling message:", error);
             await this.sendResponse(

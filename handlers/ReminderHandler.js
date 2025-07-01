@@ -5,7 +5,7 @@ export class ReminderHandler {
         this.historyService = services.historyService;
     }
 
-    async handle(botMessage) {
+    async handle(botMessage, state = null) {
         try {
             const reminderDetails = await this.extractReminderDetails(
                 botMessage
@@ -16,9 +16,9 @@ export class ReminderHandler {
             }
 
             if (reminderDetails.type === "add") {
-                if (reminderDetails.when === null) {
+                if (!reminderDetails.when) {
                     return {
-                        text: "Ask for the specific time of the reminder",
+                        text: "You ask me (the user) for the specific time of the reminder",
                     };
                 }
 
@@ -31,19 +31,19 @@ export class ReminderHandler {
 
                 if (reminderTime.getTime() - now.getTime() < 0) {
                     return {
-                        text: "Tell that the reminder time is in the past and ask for a valid future time",
+                        text: "You tell me (the user) that the reminder time is in the past and You ask for a valid future time",
                     };
                 }
 
                 if (reminderTime.getTime() - now.getTime() < oneMinuteMs) {
                     return {
-                        text: "Tell that the reminder time is too close (less than one minute) and ask for a later time",
+                        text: "You tell me (the user) that the reminder time is too close (less than one minute) and You ask for a later time",
                     };
                 }
 
                 if (reminderTime.getTime() - now.getTime() > oneWeekMs) {
                     return {
-                        text: "Tell that the reminder time is too far in the future (over one week) and ask for a closer time",
+                        text: "You tell me (the user) that the reminder time is too far in the future (over one week) and You ask for a closer time",
                     };
                 }
 
@@ -58,14 +58,16 @@ export class ReminderHandler {
                         reminderDetails.when.getTime() / 1000
                     );
                     return {
-                        text: `Tell that the reminder about ${reminderDetails.content} is set with ID \`${reminderId}\` at <t:${reminderTimestamp}:F> (this is the absoulute time), which is <t:${reminderTimestamp}:R> (this is the relative time). All the information about the time must be included in the response in given Discord format and do not include the text in the parenthesis. The user can cancel the reminder using the reminder ID`,
+                        text: `You tell me (the user) that the reminder about ${reminderDetails.content} is set with ID \`${reminderId}\` at <t:${reminderTimestamp}:F> (this is the absoulute time), which is <t:${reminderTimestamp}:R> (this is the relative time). All the information about the time must be included in the response in given Discord format and do not include the text in the parenthesis. The user can cancel the reminder using the reminder ID`,
                     };
                 } else {
                     return null;
                 }
             } else if (reminderDetails.type === "cancel") {
                 if (reminderDetails.reminderId === null) {
-                    return { text: "Ask for the specific ID of the reminder" };
+                    return {
+                        text: "You ask me (the user) for the specific ID of the reminder",
+                    };
                 }
 
                 const code = await this.reminderService.cancelReminder(
@@ -74,19 +76,21 @@ export class ReminderHandler {
                 );
 
                 if (code == -1) {
-                    return { text: "Tell that the reminder does not exist" };
+                    return {
+                        text: "You tell me (the user) that the reminder does not exist",
+                    };
                 } else if (code == 1) {
                     return {
-                        text: "Tell that the reminder is not set by the user and cannot be canceled",
+                        text: "You tell me (the user) that the reminder is not set by the user and cannot be canceled",
                     };
                 } else {
                     return {
-                        text: `Tell that the reminder with ID \`${reminderDetails.reminderId}\` has been canceled`,
+                        text: `You tell me (the user) that the reminder with ID \`${reminderDetails.reminderId}\` has been canceled`,
                     };
                 }
             } else {
                 return {
-                    text: `Tell that the action on the reminder is unknown`,
+                    text: `You tell me (the user) that the action on the reminder is unknown`,
                 };
             }
         } catch (error) {
@@ -98,10 +102,10 @@ export class ReminderHandler {
     async extractReminderDetails(botMessage) {
         try {
             const prompt = `
-Extract reminder details from the history and this message and return them in the following JSON format:
+Extract reminder details from the history and this message and return me (the user) in the following JSON format:
 {
     "type": "add" or "cancel",
-    "content" (if type is "add"): what to remind about (if not specified, just return "reminder"),
+    "content" (if type is "add"): What to remind about (if not specified, just return "reminder"),
     "when": when to remind (absolute time with ISO format like "2025-06-06T00:00:00.000Z" in UTC+0), the current time is ${new Date(
         botMessage.timestamp
     ).toISOString()} in UTC+0. If user input a specific time without their local time, assume it's in **UTC+7**. If the user did not specify the time, simply return null,
