@@ -45,6 +45,8 @@ client.once("ready", () => {
             timezone: "UTC",
         }
     );
+
+    leetcodeHandler.start();
 });
 
 client.on("messageCreate", async (discordMessage) => {
