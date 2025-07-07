@@ -41,7 +41,7 @@ class FileStorage {
         const { data, resolve, reject } = this.queue.shift();
 
         try {
-            const json = JSON.stringify(data, null, 2);
+            const json = JSON.stringify(data, null, 4);
             await fs.promises.writeFile(this.filePath, json, "utf8");
             resolve();
         } catch (err) {
@@ -57,6 +57,7 @@ class FileStorage {
     }
 }
 
-export const LeetcodeRegistrants = new FileStorage(
-    "data/LeetcodeRegistrants.json"
-);
+const LeetcodeRegistrants = new FileStorage("data/LeetcodeRegistrants.json");
+const LeetcodeStandings = new FileStorage("data/LeetcodeStandings.json");
+
+export { LeetcodeRegistrants, LeetcodeStandings };

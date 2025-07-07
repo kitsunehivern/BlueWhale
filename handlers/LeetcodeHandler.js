@@ -15,7 +15,6 @@ export class LeetcodeHandler {
     async start() {
         let data = null;
 
-        const now = new Date();
         while (!data) {
             data = await this.leetcodeService.getDailyQuestion();
 
@@ -33,7 +32,7 @@ export class LeetcodeHandler {
         const channel = await client.channels.fetch(LEETCODE_CHANNEL_ID);
         const threadName = `${data.question.questionFrontendId}. ${data.question.title}`;
 
-        this.thread = channel.threads.cache.find((thread) => {
+        let thread = channel.threads.cache.find((thread) => {
             return (
                 thread.name === threadName &&
                 this.isToday(thread.createdAt) &&
@@ -41,14 +40,14 @@ export class LeetcodeHandler {
             );
         });
 
-        if (!this.thread) {
+        if (!thread) {
             const availableTags = channel.availableTags;
             const tagToId = availableTags.reduce((acc, tag) => {
                 acc[tag.name] = tag.id;
                 return acc;
             }, {});
 
-            this.thread = await channel.threads.create({
+            thread = await channel.threads.create({
                 name: threadName,
                 autoArchiveDuration: ThreadAutoArchiveDuration.OneDay,
                 invitable: false,
@@ -72,18 +71,19 @@ export class LeetcodeHandler {
 
             const messages = MessageUtils.splitMessage(content);
             for (const message of messages) {
-                await this.thread.send({
+                await thread.send({
                     content: message,
                     allowedMentions: { users: [] },
                 });
             }
         }
 
+        const today = new Date();
         const stopTime = new Date(
             Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate() + 1,
+                today.getUTCFullYear(),
+                today.getUTCMonth(),
+                today.getUTCDate() + 1,
                 0,
                 0,
                 0,
@@ -92,21 +92,24 @@ export class LeetcodeHandler {
         );
 
         const lastUpdate = new Date();
-        const acceptedUsers = new Set();
         const intervalId = setInterval(async () => {
             const now = Date.now();
 
             if (now >= stopTime) {
                 clearInterval(intervalId);
-                const acceptedUserIds = Array.from(acceptedUsers);
+                const acceptedUsers = this.leetcodeService
+                    .getStandings(today)
+                    .filter((user) => user.accepted !== 0);
                 let congratulationMessage = "";
-                if (acceptedUserIds.length === 0) {
+                if (acceptedUsers.length === 0) {
                     congratulationMessage =
                         "No one solved the challenge today.";
-                } else if (acceptedUserIds.length === 1) {
-                    congratulationMessage = `Congratulations to <@${acceptedUserIds[0]}> for being the only one to solve the challenge today!`;
+                } else if (acceptedUsers.length === 1) {
+                    congratulationMessage = `Congratulations to <@${acceptedUsers[0].userId}> for being the only one to solve the challenge today!`;
                 } else {
-                    const mentions = acceptedUserIds.map((id) => `<@${id}>`);
+                    const mentions = acceptedUsers.map(
+                        (user) => `<@${user.userId}>`
+                    );
                     congratulationMessage = `Congratulations to ${mentions
                         .slice(0, -1)
                         .join(", ")} and ${mentions.at(
@@ -114,7 +117,7 @@ export class LeetcodeHandler {
                     )} for solving the challenge today!`;
                 }
 
-                await this.thread.send({
+                await thread.send({
                     content: `The LeetCode Daily Challenge has ended. ${congratulationMessage}`,
                     allowedMentions: { users: [] },
                 });
@@ -134,34 +137,29 @@ export class LeetcodeHandler {
                         );
 
                     for (const submission of submissions) {
-                        newSubmissions.push({
-                            user,
-                            submission,
-                        });
+                        submission.author = user;
+                        newSubmissions.push(submission);
                     }
                 }
 
                 newSubmissions.sort((a, b) => {
                     return (
-                        new Date(a.submission.timestamp * 1000) -
-                        new Date(b.submission.timestamp * 1000)
+                        new Date(a.timestamp * 1000) -
+                        new Date(b.timestamp * 1000)
                     );
                 });
 
-                for (const submissionData of newSubmissions) {
-                    const user = submissionData.user;
-                    const submission = submissionData.submission;
-                    const status = submission.statusDisplay;
+                for (const submission of newSubmissions) {
+                    this.leetcodeService.updateStandings(today, submission);
 
-                    if (status === "Accepted") {
-                        acceptedUsers.add(user.userId);
-                    }
+                    const user = submission.author;
+                    const status = submission.statusDisplay;
 
                     const solution =
                         status === "Accepted"
                             ? `[solution](https://leetcode.com${submission.url})`
                             : "solution";
-                    await this.thread.send({
+                    await thread.send({
                         content: `<@${user.userId}> submitted a ${solution} <t:${submission.timestamp}:R> and got **${status}**.`,
                         allowedMentions: { users: [] },
                     });
@@ -169,7 +167,7 @@ export class LeetcodeHandler {
 
                 lastUpdate.setTime(newUpdate.getTime());
             } catch (error) {
-                console.error("Error fetching submissions:", error);
+                // console.error("Error fetching submissions:", error);
             }
         }, 60 * 1000);
     }
