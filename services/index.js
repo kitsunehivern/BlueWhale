@@ -8,7 +8,7 @@ import fs from "fs";
 export function initializeServices() {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const chatService = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash-lite",
+        model: "gemini-2.5-flash-lite-preview-06-17",
     });
     const imageService = genAI.getGenerativeModel({
         model: "gemini-2.0-flash-exp",

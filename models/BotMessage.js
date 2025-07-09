@@ -149,8 +149,8 @@ export class BotMessage {
 
     toString() {
         return `${this.channelName}/${this.author.username}: ${
-            this.content.length > 50
-                ? `${this.content.substring(0, 50)}...`
+            this.cleanContent.length > 50
+                ? `${this.cleanContent.substring(0, 50)}...`
                 : this.cleanContent
         }`;
     }
