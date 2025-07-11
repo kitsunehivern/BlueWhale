@@ -21,6 +21,9 @@ export class BotMessage {
             roles: discordMessage.mentions.roles.map((role) => role.id),
             everyone: discordMessage.mentions.everyone,
         };
+        this.referenceId = discordMessage.reference
+            ? discordMessage.reference.messageId
+            : null;
 
         this._originalMessage = discordMessage;
 
@@ -135,14 +138,13 @@ export class BotMessage {
         }));
     }
 
-    toAIFormat() {
+    getAIFormat() {
         return {
-            role: "user",
+            role: this.author.id === client.user.id ? "model" : "user",
             parts: [
-                { text: this.content },
+                { text: this.cleanContent },
                 ...this.getAIAttachments(),
-                // no using links in history for now
-                // ...this.getAILinks(),
+                ...this.getAILinks(),
             ],
         };
     }

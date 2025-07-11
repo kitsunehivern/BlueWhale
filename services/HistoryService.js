@@ -1,45 +1,53 @@
+import client from "../index.js";
+import { BotMessage } from "../models/BotMessage.js";
+import { LRUCache } from "lru-cache";
+
+const options = {
+    max: 100,
+    allowStale: false,
+    updateAgeOnGet: false,
+    updateAgeOnHas: false,
+};
+
+const MAX_HISTORY_DEPTH = 10;
+
 export class HistoryService {
     constructor(personas) {
-        this.histories = new Map();
         this.personas = personas;
+        this.cache = new LRUCache(options);
     }
 
-    initHistory(channelId) {
-        let history = this.histories.get(channelId);
+    async getHistory(channelId, messageId) {
+        const channel = client.channels.cache.get(channelId);
+        let message = new BotMessage(
+            client.channels.cache.get(channelId).messages.cache.get(messageId)
+        );
+        let history = [];
+        for (
+            let i = 0;
+            i < MAX_HISTORY_DEPTH && message.referenceId !== null;
+            i++
+        ) {
+            if (!this.cache.has(message.referenceId)) {
+                this.cache.set(
+                    message.referenceId,
+                    new BotMessage(
+                        await channel.messages.fetch(message.referenceId)
+                    )
+                );
+            }
 
-        if (history) {
-            history.messages = [];
-        } else {
-            history = { messages: [], timeout: null };
-            this.histories.set(channelId, history);
+            message = this.cache.get(message.referenceId);
+            history.push(message.getAIFormat());
         }
 
-        history.messages.push({
+        history.push({
             role: "user",
             parts: [{ text: this.personas["Hoshino"] }],
         });
-    }
 
-    updateHistory(channelId, message) {
-        const history = this.histories.get(channelId);
-        if (!history) {
-            this.initHistory(channelId);
-            return;
-        }
+        history.reverse();
 
-        clearTimeout(history.timeout);
-        history.messages.push(message);
-
-        history.timeout = setTimeout(() => {
-            this.histories.delete(channelId);
-        }, 86_400_000);
-    }
-
-    getHistory(channelId) {
-        return this.histories.get(channelId) || { messages: [] };
-    }
-
-    hasHistory(channelId) {
-        return this.histories.has(channelId);
+        return history;
     }
 }

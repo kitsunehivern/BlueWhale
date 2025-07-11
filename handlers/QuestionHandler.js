@@ -8,18 +8,20 @@ export class QuestionHandler {
         const searchResult = await this.#getInformation(botMessage);
 
         const prompt = `
-Answer the following question based on the conversation history and any relevant information provided. If there is an error, return the error message. Question: ${botMessage.getCleanContent()}\n${searchResult}`;
+Respond to the following message based on the conversation history and any relevant information provided. If there is an error, return the error message. Message: ${botMessage.getCleanContent()}\n${searchResult}`;
 
         return { text: prompt };
     }
 
     async #getInformation(botMessage) {
-        const prompt = `Search for relevant information to answer this question. Return only factual information: "${botMessage.getCleanContent()}"`;
+        const prompt = `Search for relevant information to answer this message. Return only factual information: "${botMessage.getCleanContent()}"`;
 
         try {
             const contents = [
-                ...this.historyService.getHistory(botMessage.channelId)
-                    .messages,
+                await this.historyService.getHistory(
+                    botMessage.channelId,
+                    botMessage.id
+                ),
                 {
                     role: "user",
                     parts: [

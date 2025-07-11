@@ -34,7 +34,7 @@ export class ImageHandler {
             // const prompt = `Generate an image based on the conversation history and the following message: "${botMessage.getCleanContent()}". Use the following reference images from user if available.`;
 
             // const contents = [
-            //     ...this.historyService.getHistory(botMessage.channelId)
+            //     ...await this.historyService.getHistory(botMessage.channelId)
             //         .messages,
             //     {
             //         role: "user",
@@ -89,8 +89,10 @@ export class ImageHandler {
 
             try {
                 const contents = [
-                    ...this.historyService.getHistory(botMessage.channelId)
-                        .messages,
+                    await this.historyService.getHistory(
+                        botMessage.channelId,
+                        botMessage.id
+                    ),
                     {
                         role: "user",
                         parts: [

@@ -131,8 +131,10 @@ Do not include anything else except the JSON object. **The JSON must be valid**.
 
             const result = await this.chatService.generateContent({
                 contents: [
-                    this.historyService.getHistory(botmessage.channelId)
-                        .messages,
+                    await this.historyService.getHistory(
+                        botmessage.channelId,
+                        botmessage.id
+                    ),
                     { role: "user", parts: [{ text: prompt }] },
                 ],
             });

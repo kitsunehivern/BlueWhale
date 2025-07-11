@@ -22,7 +22,7 @@ export class MessageUtils {
         return links.map((link) => {
             return {
                 url: link,
-                type: "website",
+                type: "video/mp4",
             };
         });
     }

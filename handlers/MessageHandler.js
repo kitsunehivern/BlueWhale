@@ -29,16 +29,6 @@ export class MessageHandler {
         try {
             await botMessage.loadAttachments();
             botMessage.loadLinks();
-            if (
-                botMessage.content.includes(
-                    botMessage.getBotMentionPattern(
-                        discordMessage.client.user.id
-                    )
-                ) ||
-                !this.historyService.hasHistory(botMessage.channelId)
-            ) {
-                this.historyService.initHistory(botMessage.channelId);
-            }
 
             const intent = await this.classifier.classifyMessage(botMessage);
             console.log(`[${intent}] ${botMessage}`);
@@ -55,24 +45,15 @@ export class MessageHandler {
                 }
 
                 const chat = this.chatService.startChat({
-                    history: this.historyService.getHistory(
-                        botMessage.channelId
-                    ).messages,
+                    history: await this.historyService.getHistory(
+                        botMessage.channelId,
+                        botMessage.id
+                    ),
                 });
 
                 const response = await chat.sendMessage(result.text);
                 const responseText = response.response.text();
                 const responseImages = result.images;
-
-                this.historyService.updateHistory(
-                    botMessage.channelId,
-                    botMessage.toAIFormat()
-                );
-
-                this.historyService.updateHistory(botMessage.channelId, {
-                    role: "model",
-                    parts: [{ text: responseText }],
-                });
 
                 await this.sendResponse(
                     botMessage,

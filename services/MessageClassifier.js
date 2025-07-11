@@ -26,8 +26,10 @@ export class MessageClassifier {
 
                 const result = await this.chatService.generateContent({
                     contents: [
-                        this.historyService.getHistory(botMessage.channelId)
-                            .messsages,
+                        await this.historyService.getHistory(
+                            botMessage.channelId,
+                            botMessage.id
+                        ),
                         {
                             role: "user",
                             parts: [{ text: prompt }],

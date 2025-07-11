@@ -97,16 +97,17 @@ export class LeetcodeService {
     }
 
     async #fetchData(endpoint) {
-        try {
-            const response = await fetch(`${LEETCODE_API_URL}${endpoint}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error status: ${response.status}`);
-            }
+        while (true) {
+            try {
+                const response = await fetch(`${LEETCODE_API_URL}${endpoint}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error status: ${response.status}`);
+                }
 
-            return await response.json();
-        } catch (error) {
-            console.error("Error fetching data from LeetCode API:", error);
-            return null;
+                return await response.json();
+            } catch (error) {
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
         }
     }
 
