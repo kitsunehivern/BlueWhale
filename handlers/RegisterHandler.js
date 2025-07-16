@@ -28,13 +28,13 @@ export class RegisterHandler {
                     this.leetcodeService.checkIfRegistered(botmessage.author.id)
                 ) {
                     return {
-                        text: "You tell me (the user) that I'm already registered for LeetCode Daily Challenge",
+                        text: "You tell the user that they are already registered for LeetCode Daily Challenge",
                     };
                 }
 
                 if (!leetcodeDetails.username) {
                     return {
-                        text: "You ask me (the user) for my LeetCode username to register for LeetCode Daily Challenge",
+                        text: "You ask the user for their LeetCode username to register for LeetCode Daily Challenge",
                     };
                 }
 
@@ -43,7 +43,7 @@ export class RegisterHandler {
                 );
                 if (!userExists) {
                     return {
-                        text: `You tell me (the user) that the LeetCode user \`${leetcodeDetails.username}\` does not exist on LeetCode`,
+                        text: `You tell the user that the LeetCode user \`${leetcodeDetails.username}\` does not exist on LeetCode`,
                     };
                 }
 
@@ -52,7 +52,7 @@ export class RegisterHandler {
                 nextMinute.setMinutes(nextMinute.getMinutes() + 1);
 
                 return {
-                    text: `You tell me (the user) to validate their LeetCode username by submitting anything on the following question: [${
+                    text: `You tell the user to validate their LeetCode username by submitting anything on the following question: [${
                         data.title
                     }](${
                         data.url
@@ -73,13 +73,13 @@ export class RegisterHandler {
                     )
                 ) {
                     return {
-                        text: "You tell me (the user) that they are not registered for LeetCode Daily Challenge",
+                        text: "You tell the user that they are not registered for LeetCode Daily Challenge",
                     };
                 }
 
                 this.leetcodeService.unregisterUser(botmessage.author.id);
                 return {
-                    text: "You tell me (the user) that they have been unregistered successfully from LeetCode Daily Challenge",
+                    text: "You tell the user that they have been unregistered successfully from LeetCode Daily Challenge",
                 };
             }
         } catch (error) {
@@ -103,11 +103,11 @@ export class RegisterHandler {
                     state.username
                 );
                 return {
-                    text: `You tell me (the user) that they have been registered successfully with username \`${state.username}\` for LeetCode Daily Challenge`,
+                    text: `You tell the user that they have been registered successfully with username \`${state.username}\` for LeetCode Daily Challenge`,
                 };
             } else {
                 return {
-                    text: "You tell me (the user) that you have not received any submissions on the question in the last minute, so you cannot confirm their registration",
+                    text: "You tell the user that you have not received any submissions on the question in the last minute, so you cannot confirm their registration",
                 };
             }
         } catch (error) {
@@ -119,7 +119,7 @@ export class RegisterHandler {
     async extractLeetcodeDetails(botmessage) {
         try {
             const prompt = `
-Extract reminder details from the history and this message and return me (the user) in the following JSON format:
+Extract reminder details from the history and this message and return the result in the following JSON format:
 {
     "type": "register" or "unregister",
     "username" (if type is "register"): Their LeetCode username (if not specified, just return null),
