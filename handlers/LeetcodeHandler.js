@@ -7,6 +7,28 @@ import TurndownService from "turndown";
 dotenv.config();
 const LEETCODE_CHANNEL_ID = process.env.LEETCODE_CHANNEL_ID;
 
+const languageMap = {
+    cpp: "C++",
+    java: "Java",
+    python: "Python",
+    python3: "Python 3",
+    c: "C",
+    csharp: "C#",
+    javascript: "JavaScript",
+    typescript: "TypeScript",
+    php: "PHP",
+    swift: "Swift",
+    kotlin: "Kotlin",
+    dart: "Dart",
+    go: "Go",
+    ruby: "Ruby",
+    scala: "Scala",
+    rust: "Rust",
+    racket: "Racket",
+    erlang: "Erlang",
+    elixir: "Elixir",
+};
+
 export class LeetcodeHandler {
     constructor(services) {
         this.leetcodeService = services.leetcodeService;
@@ -14,7 +36,6 @@ export class LeetcodeHandler {
 
     async start() {
         let data = null;
-
         while (!data) {
             data = await this.leetcodeService.getDailyQuestion();
 
@@ -93,52 +114,42 @@ export class LeetcodeHandler {
 
         const lastUpdate = new Date();
         const intervalId = setInterval(async () => {
-            const now = Date.now();
-
-            if (now >= stopTime) {
-                clearInterval(intervalId);
-                const acceptedUsers = this.leetcodeService
-                    .getStandings(today)
-                    .filter((user) => user.accepted !== 0);
-                let congratulationMessage = "";
-                if (acceptedUsers.length === 0) {
-                    congratulationMessage =
-                        "No one solved the challenge today.";
-                } else if (acceptedUsers.length === 1) {
-                    congratulationMessage = `Congratulations to <@${acceptedUsers[0].userId}> for being the only one to solve the challenge today!`;
-                } else {
-                    const mentions = acceptedUsers.map(
-                        (user) => `<@${user.userId}>`
-                    );
-                    congratulationMessage = `Congratulations to ${mentions
-                        .slice(0, -1)
-                        .join(", ")} and ${mentions.at(
-                        -1
-                    )} for solving the challenge today!`;
-                }
-
-                await thread.send({
-                    content: `The LeetCode Daily Challenge has ended. ${congratulationMessage}`,
-                    allowedMentions: { users: [] },
-                });
-                return;
-            }
-
             try {
-                const newUpdate = new Date();
+                const newUpdate = new Date(
+                    Math.min(Date.now(), stopTime.getTime())
+                );
                 const newSubmissions = [];
                 for (const user of this.leetcodeService.getRegistrants()) {
-                    const submissions =
-                        await this.leetcodeService.getSubmissionsByQuestionBetween(
-                            user.username,
-                            data.question.titleSlug,
-                            lastUpdate,
-                            newUpdate
-                        );
+                    while (true) {
+                        const submissions =
+                            await this.leetcodeService.getSubmissionsByQuestionBetween(
+                                user.username,
+                                data.question.titleSlug,
+                                lastUpdate,
+                                newUpdate
+                            );
 
-                    for (const submission of submissions) {
-                        submission.author = user;
-                        newSubmissions.push(submission);
+                        let hasInternalError = false;
+                        for (const submission of submissions) {
+                            if (submission.statusDisplay === "Internal Error") {
+                                hasInternalError = true;
+                                break;
+                            }
+                        }
+
+                        if (hasInternalError) {
+                            await new Promise((resolve) =>
+                                setTimeout(resolve, 10000)
+                            );
+                            continue;
+                        }
+
+                        for (const submission of submissions) {
+                            submission.author = user;
+                            newSubmissions.push(submission);
+                        }
+
+                        break;
                     }
                 }
 
@@ -160,16 +171,49 @@ export class LeetcodeHandler {
                             ? `[solution](https://leetcode.com${submission.url})`
                             : "solution";
                     await thread.send({
-                        content: `<@${user.userId}> submitted a ${solution} <t:${submission.timestamp}:R> and got **${status}**.`,
+                        content: `<@${
+                            user.userId
+                        }> submitted a ${solution} in ${
+                            languageMap[submission.lang]
+                        } <t:${submission.timestamp}:R> and got **${status}**.`,
                         allowedMentions: { users: [] },
                     });
+                }
+
+                if (newUpdate >= stopTime) {
+                    clearInterval(intervalId);
+                    const acceptedUsers = this.leetcodeService
+                        .getStandings(today)
+                        .filter((user) => user.accepted !== 0);
+                    let congratulationMessage = "";
+                    if (acceptedUsers.length === 0) {
+                        congratulationMessage =
+                            "No one solved the challenge today.";
+                    } else if (acceptedUsers.length === 1) {
+                        congratulationMessage = `Congratulations to <@${acceptedUsers[0].userId}> for being the only one to solve the challenge today!`;
+                    } else {
+                        const mentions = acceptedUsers.map(
+                            (user) => `<@${user.userId}>`
+                        );
+                        congratulationMessage = `Congratulations to ${mentions
+                            .slice(0, -1)
+                            .join(", ")} and ${mentions.at(
+                            -1
+                        )} for solving the challenge today!`;
+                    }
+
+                    await thread.send({
+                        content: `The LeetCode Daily Challenge has ended. ${congratulationMessage}`,
+                        allowedMentions: { users: [] },
+                    });
+                    return;
                 }
 
                 lastUpdate.setTime(newUpdate.getTime());
             } catch (error) {
                 // console.error("Error fetching submissions:", error);
             }
-        }, 60 * 1000);
+        }, 60000);
     }
 
     formatContent(content) {
@@ -215,9 +259,9 @@ export class LeetcodeHandler {
     isToday(date) {
         const now = new Date();
         return (
-            date.getFullYear() === now.getFullYear() &&
-            date.getMonth() === now.getMonth() &&
-            date.getDate() === now.getDate()
+            date.getUTCFullYear() === now.getUTCFullYear() &&
+            date.getUTCMonth() === now.getUTCMonth() &&
+            date.getUTCDate() === now.getUTCDate()
         );
     }
 }
