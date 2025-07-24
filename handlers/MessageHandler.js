@@ -35,12 +35,19 @@ export class MessageHandler {
 
             let state = null;
             while (true) {
-                const handler = this.handlers[intent] || this.handlers.chat;
-                let result = await handler.handle(botMessage, state);
+                let result = null;
+                if (intent === "none") {
+                    result = {
+                        text: "You tell the user that you cannot do the requested action",
+                    };
+                } else {
+                    const handler = this.handlers[intent] || this.handlers.chat;
+                    result = await handler.handle(botMessage, state);
+                }
 
                 if (result === null || result.text.trim() === "") {
                     result = {
-                        text: "Tell that you're unavailable right now and cannot complete the action",
+                        text: "You tell the user that you're unavailable right now and cannot complete the action",
                     };
                 }
 

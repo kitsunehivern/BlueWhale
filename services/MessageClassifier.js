@@ -14,14 +14,14 @@ export class MessageClassifier {
                 const prompt = `
     Classify the following message into one of these categories:
     - "question": Asking for information, explanations, or answers
-    - "image": Find images based on the message content
     - "reminder": Setting up or canceling reminders, scheduling notifications, or time-based alerts
     - "register": Registering or unregistering for a LeetCode Daily Challenge
     - "chat": General conversation, greetings, casual talk, or expressions
+    - "none": If the message does not fit any of the above categories
 
     Message: "${botMessage.content}"
 
-    Respond with only the category name (question, image, reminder, register or chat).
+    Respond with only the category name (question, reminder, register, chat, or none).
                 `;
 
                 const result = await this.chatService.generateContent({
@@ -45,10 +45,10 @@ export class MessageClassifier {
                 if (
                     [
                         "question",
-                        "image",
                         "reminder",
                         "register",
                         "chat",
+                        "none",
                     ].includes(classification)
                 ) {
                     return classification;
