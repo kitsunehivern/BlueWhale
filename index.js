@@ -55,7 +55,10 @@ client.on("messageCreate", async (discordMessage) => {
     }
 
     const botMessage = new BotMessage(discordMessage);
-    if (!botMessage.botWasMentioned(client.user.id)) {
+    if (
+        !botMessage.botWasMentioned(client.user.id) &&
+        !botMessage.isCommand()
+    ) {
         return;
     }
 

@@ -68,6 +68,10 @@ export class BotMessage {
         return this.mentions.users.includes(botUserId);
     }
 
+    isCommand() {
+        return this.cleanContent.startsWith("=");
+    }
+
     getBotMentionPattern(botUserId) {
         return `<@${botUserId}>`;
     }

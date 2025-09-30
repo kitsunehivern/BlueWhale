@@ -9,8 +9,6 @@ export class ImageHandler {
     async handle(botMessage, state = null) {
         try {
             const searchQuery = await this.extractSearchQuery(botMessage);
-            console.log(`Query extracted: ${searchQuery}`);
-
             if (searchQuery == null) {
                 return null;
             }

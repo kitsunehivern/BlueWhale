@@ -5,7 +5,21 @@ export class MessageClassifier {
     }
 
     async classifyMessage(botMessage) {
-        return await this.#aiClassify(botMessage);
+        let result = this.#fastClassify(botMessage);
+        if (result === null) {
+            result = await this.#aiClassify(botMessage);
+        }
+
+        return result;
+    }
+
+    #fastClassify(botMessage) {
+        const text = botMessage.getCleanContent().toLowerCase();
+        if (text.startsWith("=")) {
+            return "math";
+        }
+
+        return null;
     }
 
     async #aiClassify(botMessage) {
@@ -18,7 +32,7 @@ export class MessageClassifier {
     - "register": Registering or unregistering for a LeetCode Daily Challenge
     - "chat": General conversation, greetings, casual talk, or expressions
 
-    Message: "${botMessage.content}"
+    Message: "${botMessage.getCleanContent()}"
 
     Respond with only the category name (question, reminder, register, chat).
                 `;

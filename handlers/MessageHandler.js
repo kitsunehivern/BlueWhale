@@ -4,6 +4,7 @@ import { ImageHandler } from "./ImageHandler.js";
 import { ReminderHandler } from "./ReminderHandler.js";
 import { RegisterHandler } from "./RegisterHandler.js";
 import { ChatHandler } from "./ChatHandler.js";
+import { MathHandler } from "./MathHandler.js";
 import { BotMessage } from "../models/BotMessage.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
 import { AttachmentBuilder } from "discord.js";
@@ -21,6 +22,7 @@ export class MessageHandler {
             reminder: new ReminderHandler(services),
             register: new RegisterHandler(services),
             chat: new ChatHandler(services),
+            math: new MathHandler(services),
         };
     }
 
@@ -51,21 +53,29 @@ export class MessageHandler {
                     };
                 }
 
-                const chat = this.chatService.startChat({
-                    history: await this.historyService.getHistory(
-                        botMessage.channelId,
-                        botMessage.id
-                    ),
-                });
+                let responseText;
+                if (result.skipAI) {
+                    responseText = result.text;
+                } else {
+                    const chat = this.chatService.startChat({
+                        history: await this.historyService.getHistory(
+                            botMessage.channelId,
+                            botMessage.id
+                        ),
+                    });
 
-                const response = await chat.sendMessage(result.text);
-                const responseText = response.response.text();
+                    const response = await chat.sendMessage(result.text);
+                    responseText = response.response.text();
+                }
+
                 const responseImages = result.images;
+                const skipTyping = result.skipTyping || false;
 
                 await this.sendResponse(
                     botMessage,
                     responseText,
-                    responseImages
+                    responseImages,
+                    skipTyping
                 );
 
                 if (result.state) {
@@ -82,12 +92,19 @@ export class MessageHandler {
             console.error("Error handling message:", error);
             await this.sendResponse(
                 botMessage,
-                "Fuck you! Don't ever bother me again!"
+                "Fuck you! Don't ever bother me again!",
+                undefined,
+                true
             );
         }
     }
 
-    async sendResponse(botMessage, response, attachments = undefined) {
+    async sendResponse(
+        botMessage,
+        response,
+        attachments = undefined,
+        skipTyping = false
+    ) {
         const responseChunks = MessageUtils.formatMessage(response);
         const discordAttachments = attachments
             ? await Promise.all(
@@ -116,10 +133,12 @@ export class MessageHandler {
             : undefined;
 
         for (let i = 0; i < responseChunks.length; i++) {
-            await botMessage.sendTyping();
-            await MessageUtils.delay(
-                Math.min(responseChunks[i].length * 10, 10000)
-            );
+            if (!skipTyping) {
+                await botMessage.sendTyping();
+                await MessageUtils.delay(
+                    Math.min(responseChunks[i].length * 10, 10000)
+                );
+            }
 
             const sendOptions =
                 i === responseChunks.length - 1 && discordAttachments

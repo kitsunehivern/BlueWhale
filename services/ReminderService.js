@@ -65,12 +65,10 @@ export class ReminderService {
     cancelReminder(userId, reminderId) {
         const reminder = this.reminders.get(reminderId);
         if (!reminder) {
-            console.log("Reminder does not exist");
             return -1;
         }
 
         if (reminder.userId != userId) {
-            console.log("Reminder does not belong to user");
             return 1;
         }
 

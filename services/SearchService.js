@@ -11,7 +11,6 @@ export class SearchService {
             process.env.CUSTOM_SEARCH_API
         }&searchType=image&num=${numImages}&imgType=photo&fileType=png`;
         const res = await axios.get(url);
-        console.log("Search status code:", res.status);
         if (res.status !== 200) {
             return [];
         }
