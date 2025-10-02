@@ -19,15 +19,11 @@ export class MathHandler {
                 ),
             ]);
 
-            if (result === undefined || result === null) {
-                return {
-                    text: "No result",
-                    skipAI: true,
-                    skipTyping: true,
-                };
+            let resultStr = String(result);
+            if (typeof result === "function") {
+                resultStr = "```js\n" + resultStr + "\n```";
             }
 
-            const resultStr = result.toString();
             if (resultStr.length > 2000) {
                 return {
                     text: "Result too large!",

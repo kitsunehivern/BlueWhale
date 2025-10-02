@@ -1,6 +1,6 @@
 # Blue Whale
 
-A Hoshino-style Discord bot
+A Hoshino/Ibuki-style Discord bot
 
 ## Features
 
@@ -10,3 +10,4 @@ A Hoshino-style Discord bot
 -   Add/Cancel reminders
 -   Register/Unregister for LeetCode Daily Challenge
 -   Manage LeetCode Daily Challenge threads
+-   Do math

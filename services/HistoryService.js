@@ -4,6 +4,7 @@ import { LRUCache } from "lru-cache";
 
 const options = {
     max: 100,
+    ttl: 1000 * 60 * 60,
     allowStale: false,
     updateAgeOnGet: false,
     updateAgeOnHas: false,
@@ -43,7 +44,7 @@ export class HistoryService {
 
         history.push({
             role: "user",
-            parts: [{ text: this.personas["Hoshino"] }],
+            parts: [{ text: this.personas["Ibuki"] }],
         });
 
         history.reverse();
