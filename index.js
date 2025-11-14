@@ -29,24 +29,24 @@ client.once("ready", () => {
     client.user.setPresence({
         activities: [
             {
-                name: "with Kitsune",
-                type: ActivityType.Playing,
+                name: "Sleeping with Kitsune",
+                type: ActivityType.Watching,
             },
         ],
         status: "online",
     });
 
-    cron.schedule(
-        "0 0 0 * * *",
-        async () => {
-            await leetcodeHandler.start();
-        },
-        {
-            timezone: "UTC",
-        }
-    );
+    // cron.schedule(
+    //     "0 0 0 * * *",
+    //     async () => {
+    //         await leetcodeHandler.start();
+    //     },
+    //     {
+    //         timezone: "UTC",
+    //     }
+    // );
 
-    leetcodeHandler.start();
+    // leetcodeHandler.start();
 });
 
 client.on("messageCreate", async (discordMessage) => {
@@ -56,13 +56,14 @@ client.on("messageCreate", async (discordMessage) => {
 
     const botMessage = new BotMessage(discordMessage);
     if (
-        !botMessage.botWasMentioned(client.user.id) &&
-        !botMessage.isCommand()
+        !botMessage.botWasMentioned() &&
+        !botMessage.isCommand() &&
+        !botMessage.hasTypo()
     ) {
         return;
     }
 
-    await messageHandler.handleMessage(discordMessage);
+    await messageHandler.handleMessage(botMessage);
 });
 
 client.login(process.env.DISCORD_TOKEN);

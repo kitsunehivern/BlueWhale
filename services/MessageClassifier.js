@@ -29,12 +29,11 @@ export class MessageClassifier {
     Classify the following message into one of these categories:
     - "question": Asking for summarization, information, explanations, or answers
     - "reminder": Setting up or canceling reminders, scheduling notifications, or time-based alerts
-    - "register": Registering or unregistering for a LeetCode Daily Challenge
     - "chat": General conversation, greetings, casual talk, or expressions
 
     Message: "${botMessage.getCleanContent()}"
 
-    Respond with only the category name (question, reminder, register, chat).
+    Respond with only the category name (question, reminder, chat).
                 `;
 
                 const result = await this.chatService.generateContent({
@@ -55,11 +54,7 @@ export class MessageClassifier {
                     .trim()
                     .toLowerCase();
 
-                if (
-                    ["question", "reminder", "register", "chat"].includes(
-                        classification
-                    )
-                ) {
+                if (["question", "reminder", "chat"].includes(classification)) {
                     return classification;
                 }
             } catch (error) {

@@ -64,12 +64,17 @@ export class BotMessage {
         return this._originalMessage;
     }
 
-    botWasMentioned(botUserId) {
-        return this.mentions.users.includes(botUserId);
+    botWasMentioned() {
+        return this.mentions.users.includes(client.user.id);
     }
 
     isCommand() {
         return this.cleanContent.startsWith("=");
+    }
+
+    hasTypo() {
+        const pattern = "(?<![sS][ơƠ]\\s+)[sS][àÀ][iI](?!\\s*[gG][òÒ][nN])";
+        return new RegExp(pattern).test(this.cleanContent);
     }
 
     getBotMentionPattern(botUserId) {

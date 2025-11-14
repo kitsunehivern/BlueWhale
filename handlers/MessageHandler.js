@@ -26,8 +26,15 @@ export class MessageHandler {
         };
     }
 
-    async handleMessage(discordMessage) {
-        const botMessage = new BotMessage(discordMessage);
+    async handleMessage(botMessage) {
+        if (botMessage.hasTypo()) {
+            await this.sendResponse(botMessage, "*xài", undefined, true);
+        }
+
+        if (!botMessage.botWasMentioned() && !botMessage.isCommand()) {
+            return;
+        }
+
         try {
             await botMessage.loadAttachments();
             botMessage.loadLinks();

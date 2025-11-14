@@ -44,7 +44,7 @@ export class HistoryService {
 
         history.push({
             role: "user",
-            parts: [{ text: this.personas["Ibuki"] }],
+            parts: [{ text: this.personas["Hoshino"] }],
         });
 
         history.reverse();
