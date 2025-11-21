@@ -5,7 +5,7 @@ import { Message } from "../models/Message.js";
 export class ChatService {
     constructor(options = {}) {
         this.model =
-            options.model || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+            options.model || process.env.GEMINI_API_MODEL || "gemini-2.5-flash";
         this.systemInstruction =
             options.systemInstruction ||
             "You are a friendly, concise Discord chat bot. Reply in a casual style.";
@@ -29,6 +29,7 @@ export class ChatService {
                           parts: [{ text: this.systemInstruction }],
                       }
                     : undefined,
+                tools: [{ googleSearch: {} }],
             },
         };
 

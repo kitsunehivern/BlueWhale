@@ -28,30 +28,24 @@ export class MessageHandler {
 
         try {
             const response = await handler.handle(message);
-            if (response.message) {
-                await this.sendResponse(
-                    message,
-                    response.message,
-                    response.options || {}
-                );
+            if (response) {
+                await this.sendResponse(message, response);
             }
         } catch (error) {
             console.error("Error handling message", error);
         }
     }
 
-    async sendResponse(originalMessage, responseMessage, options = {}) {
+    async sendResponse(originalMessage, responseMessage) {
         const responseChunks = MessageUtils.formatMessage(
             responseMessage.getCleanContent()
         );
 
         for (let i = 0; i < responseChunks.length; i++) {
-            if (options.skipTyping) {
-                await originalMessage.sendTyping();
-                await MessageUtils.delay(
-                    Math.min(responseChunks[i].length * 10, 10000)
-                );
-            }
+            await originalMessage.sendTyping();
+            await MessageUtils.delay(
+                Math.min(responseChunks[i].length * 10, 10000)
+            );
 
             if (i === 0) {
                 await originalMessage.reply(responseChunks[i]);
