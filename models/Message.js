@@ -1,51 +1,41 @@
 import client from "../index.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
 
-export class BotMessage {
-    constructor(discordMessage) {
-        this.id = discordMessage.id;
-        this.content = discordMessage.content;
-        this.channelId = discordMessage.channelId;
-        this.channelName = discordMessage.channel.name;
-        this.guildId = discordMessage.guildId;
-        this.author = {
-            id: discordMessage.author.id,
-            username: discordMessage.author.username,
-            displayName: discordMessage.author.displayName,
-            bot: discordMessage.author.bot,
-        };
-        this.timestamp = discordMessage.createdTimestamp;
-        this.editedTimestamp = discordMessage.editedTimestamp;
-        this.mentions = {
-            users: discordMessage.mentions.users.map((user) => user.id),
-            roles: discordMessage.mentions.roles.map((role) => role.id),
-            everyone: discordMessage.mentions.everyone,
-        };
-        this.referenceId = discordMessage.reference
-            ? discordMessage.reference.messageId
-            : null;
+export class Message {
+    constructor(message) {
+        this.id = message.id;
+        this.content = message.content;
+        this.cleanContent = this._cleanContent(message.content);
+        this.channelId = message.channelId;
+        this.channelName = message.channel?.name;
+        this.guildId = message.guildId;
+        this.author = message.author
+            ? {
+                  id: message.author.id,
+                  username: message.author.username,
+                  displayName: message.author.displayName,
+                  bot: message.author.bot,
+              }
+            : undefined;
+        this.timestamp = message.createdTimestamp;
+        this.editedTimestamp = message.editedTimestamp;
+        this.mentions = message.mentions
+            ? {
+                  users: message.mentions.users.map((user) => user.id),
+                  roles: message.mentions.roles.map((role) => role.id),
+                  everyone: message.mentions.everyone,
+              }
+            : undefined;
+        this.referenceId = message.reference
+            ? message.reference.messageId
+            : undefined;
 
-        this._originalMessage = discordMessage;
-
-        this.attachments = null;
-        this.links = null;
-        this.cleanContent = this._cleanContent(discordMessage.content);
+        this._originalMessage = message;
     }
 
-    async loadAttachments() {
-        if (this.attachments === null) {
-            this.attachments = await MessageUtils.getAttachments(
-                this._originalMessage
-            );
-        }
-        return this.attachments;
-    }
-
-    loadLinks() {
-        if (this.links === null) {
-            this.links = MessageUtils.getLinks(this._originalMessage);
-        }
-        return this.links;
+    async loadEmbeddings() {
+        await this._loadAttachments();
+        this._loadLinks();
     }
 
     getAttachments() {
@@ -69,12 +59,7 @@ export class BotMessage {
     }
 
     isCommand() {
-        return this.cleanContent.startsWith("=");
-    }
-
-    hasTypo() {
-        const pattern = "(?<![sS][ơƠ]\\s+)[sS][àÀ][iI](?!\\s*[gG][òÒ][nN])";
-        return new RegExp(pattern).test(this.cleanContent);
+        return this.getCleanContent().startsWith("=");
     }
 
     getBotMentionPattern(botUserId) {
@@ -99,6 +84,20 @@ export class BotMessage {
 
     async sendTyping() {
         return await this._originalMessage.channel.sendTyping();
+    }
+
+    async _loadAttachments() {
+        if (this.attachments == null) {
+            this.attachments = await MessageUtils.getAttachments(
+                this._originalMessage
+            );
+        }
+    }
+
+    _loadLinks() {
+        if (this.links == null) {
+            this.links = MessageUtils.getLinks(this._originalMessage);
+        }
     }
 
     _processAttachments(attachments) {
@@ -158,7 +157,7 @@ export class BotMessage {
         };
     }
 
-    toString() {
+    preview() {
         return `${this.channelName}/${this.author.username}: ${
             this.cleanContent.length > 50
                 ? `${this.cleanContent.substring(0, 50)}...`

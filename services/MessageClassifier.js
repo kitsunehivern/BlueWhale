@@ -5,7 +5,7 @@ export class MessageClassifier {
     }
 
     async classifyMessage(botMessage) {
-        let result = this.#fastClassify(botMessage);
+        let result = await this.#fastClassify(botMessage);
         if (result === null) {
             result = await this.#aiClassify(botMessage);
         }
@@ -13,7 +13,7 @@ export class MessageClassifier {
         return result;
     }
 
-    #fastClassify(botMessage) {
+    async #fastClassify(botMessage) {
         const text = botMessage.getCleanContent().toLowerCase();
         if (text.startsWith("=")) {
             return "math";
@@ -23,45 +23,6 @@ export class MessageClassifier {
     }
 
     async #aiClassify(botMessage) {
-        for (let i = 0; i < 3; i++) {
-            try {
-                const prompt = `
-    Classify the following message into one of these categories:
-    - "question": Asking for summarization, information, explanations, or answers
-    - "reminder": Setting up or canceling reminders, scheduling notifications, or time-based alerts
-    - "chat": General conversation, greetings, casual talk, or expressions
-
-    Message: "${botMessage.getCleanContent()}"
-
-    Respond with only the category name (question, reminder, chat).
-                `;
-
-                const result = await this.chatService.generateContent({
-                    contents: [
-                        await this.historyService.getHistory(
-                            botMessage.channelId,
-                            botMessage.id
-                        ),
-                        {
-                            role: "user",
-                            parts: [{ text: prompt }],
-                        },
-                    ],
-                });
-
-                const classification = result.response
-                    .text()
-                    .trim()
-                    .toLowerCase();
-
-                if (["question", "reminder", "chat"].includes(classification)) {
-                    return classification;
-                }
-            } catch (error) {
-                console.error("Error in AI classification:", error);
-            }
-        }
-
         return "chat";
     }
 }

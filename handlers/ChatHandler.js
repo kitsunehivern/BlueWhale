@@ -1,9 +1,14 @@
 export class ChatHandler {
-    constructor(services) {}
+    constructor(services) {
+        this.chatService = services.chatService;
+        this.historyService = services.historyService;
+    }
 
-    async handle(botMessage, state = null) {
+    async handle(message) {
+        const history = await this.historyService.getHistory(message);
+        const response = await this.chatService.respond(history);
         return {
-            text: `Respond to the message: ${botMessage.getCleanContent()}`,
+            message: response,
         };
     }
 }

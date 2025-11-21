@@ -1,10 +1,8 @@
-import { Client, ActivityType, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
+import { Client, ActivityType, GatewayIntentBits } from "discord.js";
+import { Message } from "./models/Message.js";
 import { MessageHandler } from "./handlers/MessageHandler.js";
-import { LeetcodeHandler } from "./handlers/LeetcodeHandler.js";
-import { initializeServices } from "./services/index.js";
-import { BotMessage } from "./models/BotMessage.js";
-import cron from "node-cron";
+import { newServices } from "./services/index.js";
 
 dotenv.config();
 
@@ -19,11 +17,10 @@ const client = new Client({
 
 export default client;
 
-const services = initializeServices();
+const services = newServices();
 const messageHandler = new MessageHandler(services);
-const leetcodeHandler = new LeetcodeHandler(services);
 
-client.once("ready", () => {
+client.once("clientReady", () => {
     console.log(`Logged in as ${client.user.tag}`);
 
     client.user.setPresence({
@@ -35,18 +32,6 @@ client.once("ready", () => {
         ],
         status: "online",
     });
-
-    // cron.schedule(
-    //     "0 0 0 * * *",
-    //     async () => {
-    //         await leetcodeHandler.start();
-    //     },
-    //     {
-    //         timezone: "UTC",
-    //     }
-    // );
-
-    // leetcodeHandler.start();
 });
 
 client.on("messageCreate", async (discordMessage) => {
@@ -54,16 +39,12 @@ client.on("messageCreate", async (discordMessage) => {
         return;
     }
 
-    const botMessage = new BotMessage(discordMessage);
-    if (
-        !botMessage.botWasMentioned() &&
-        !botMessage.isCommand() &&
-        !botMessage.hasTypo()
-    ) {
+    const message = new Message(discordMessage);
+    if (!message.botWasMentioned() && !message.isCommand()) {
         return;
     }
 
-    await messageHandler.handleMessage(botMessage);
+    await messageHandler.handle(message);
 });
 
 client.login(process.env.DISCORD_TOKEN);
