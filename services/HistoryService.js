@@ -23,7 +23,10 @@ export class HistoryService {
                 const refMessage = await channel.messages.fetch(
                     message.referenceId
                 );
-                this.cache.set(message.referenceId, new Message(refMessage));
+
+                const newMessage = new Message(refMessage);
+                await newMessage.loadEmbeddings();
+                this.cache.set(message.referenceId, newMessage);
             }
 
             message = this.cache.get(message.referenceId);

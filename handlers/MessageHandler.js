@@ -2,6 +2,7 @@ import { MessageClassifier } from "../services/MessageClassifier.js";
 import { ChatHandler } from "./ChatHandler.js";
 import { MathHandler } from "./MathHandler.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
+import { or } from "mathjs";
 
 export class MessageHandler {
     constructor(services) {
@@ -41,17 +42,14 @@ export class MessageHandler {
             responseMessage.getCleanContent()
         );
 
+        let lastMessage = originalMessage;
         for (let i = 0; i < responseChunks.length; i++) {
             await originalMessage.sendTyping();
             await MessageUtils.delay(
                 Math.min(responseChunks[i].length * 10, 10000)
             );
 
-            if (i === 0) {
-                await originalMessage.reply(responseChunks[i]);
-            } else {
-                await originalMessage.send(responseChunks[i]);
-            }
+            lastMessage = await lastMessage.reply(responseChunks[i]);
         }
     }
 }

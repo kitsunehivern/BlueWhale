@@ -1,5 +1,10 @@
 import dotenv from "dotenv";
-import { Client, ActivityType, GatewayIntentBits } from "discord.js";
+import {
+    Client,
+    ActivityType,
+    GatewayIntentBits,
+    PresenceUpdateStatus,
+} from "discord.js";
 import { Message } from "./models/Message.js";
 import { MessageHandler } from "./handlers/MessageHandler.js";
 import { newServices } from "./services/index.js";
@@ -27,10 +32,10 @@ client.once("clientReady", () => {
         activities: [
             {
                 name: "Sleeping with Kitsune",
-                type: ActivityType.Watching,
+                type: ActivityType.Custom,
             },
         ],
-        status: "online",
+        status: PresenceUpdateStatus.Idle,
     });
 });
 
