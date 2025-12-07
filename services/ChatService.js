@@ -34,9 +34,9 @@ export class ChatService {
         };
 
         const response = await this._generateWithRetries(request);
-        let replyText = "(no response)";
+        let replyText = "...";
         if (response) {
-            replyText = String(response.text || "").trim() || "(no response)";
+            replyText = String(response.text || "").trim() || "...";
         }
 
         return new Message({
@@ -63,7 +63,7 @@ export class ChatService {
             }
         }
 
-        log.error("Exceeded maximum retries for Gemini API");
+        console.error("Exceeded maximum retries for Gemini API");
         return null;
     }
 }

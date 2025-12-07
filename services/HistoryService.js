@@ -18,19 +18,23 @@ export class HistoryService {
     async getHistory(message) {
         const channel = client.channels.cache.get(message.channelId);
         let history = [message];
-        while (message.referenceId != undefined) {
-            if (!this.cache.has(message.referenceId)) {
-                const refMessage = await channel.messages.fetch(
-                    message.referenceId
-                );
+        try {
+            while (message.referenceId != undefined) {
+                if (!this.cache.has(message.referenceId)) {
+                    const refMessage = await channel.messages.fetch(
+                        message.referenceId
+                    );
 
-                const newMessage = new Message(refMessage);
-                await newMessage.loadEmbeddings();
-                this.cache.set(message.referenceId, newMessage);
+                    const newMessage = new Message(refMessage);
+                    await newMessage.loadEmbeddings();
+                    this.cache.set(message.referenceId, newMessage);
+                }
+
+                message = this.cache.get(message.referenceId);
+                history.push(message);
             }
-
-            message = this.cache.get(message.referenceId);
-            history.push(message);
+        } catch (err) {
+            console.error("Error fetching message history", err);
         }
 
         history.reverse();
