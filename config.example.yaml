@@ -1,0 +1,9 @@
+discord:
+    token: DISCORD_BOT_TOKEN
+
+gemini:
+    keys:
+        - API_KEY_1
+        - API_KEY_2
+    model: gemini-2.5-flash
+    timeout: 60000

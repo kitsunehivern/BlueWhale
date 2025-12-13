@@ -9,10 +9,11 @@
     "description": "",
     "dependencies": {
         "@google/genai": "^1.30.0",
+        "@supabase/supabase-js": "^2.87.1",
         "axios": "^1.9.0",
         "discord.js": "^14.19.3",
-        "dotenv": "^16.5.0",
         "lru-cache": "^11.1.0",
-        "mathjs": "^14.8.1"
+        "mathjs": "^14.8.1",
+        "yaml": "^2.8.2"
     }
 }

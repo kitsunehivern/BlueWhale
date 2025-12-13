@@ -1,6 +1,6 @@
 # Blue Whale
 
-A Hoshino/Ibuki-style Discord bot
+A Hoshino-style Discord bot
 
 ## Features
 

@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import config from "./config.js";
 import {
     Client,
     ActivityType,
@@ -8,8 +8,6 @@ import {
 import { Message } from "./models/Message.js";
 import { MessageHandler } from "./handlers/MessageHandler.js";
 import { newServices } from "./services/index.js";
-
-dotenv.config();
 
 const client = new Client({
     intents: [
@@ -52,4 +50,4 @@ client.on("messageCreate", async (discordMessage) => {
     await messageHandler.handle(message);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(config.discord.token);
