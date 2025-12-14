@@ -1,4 +1,4 @@
-import client from "../index.js";
+import client from "../client.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
 
 export class Message {
@@ -13,7 +13,6 @@ export class Message {
             ? {
                   id: message.author.id,
                   username: message.author.username,
-                  displayName: message.author.displayName,
                   bot: message.author.bot,
               }
             : undefined;
@@ -31,6 +30,10 @@ export class Message {
             : undefined;
 
         this._originalMessage = message;
+    }
+
+    shouldProcess() {
+        return this.botWasMentioned() || this.isCommand();
     }
 
     async loadEmbeddings() {
@@ -69,7 +72,7 @@ export class Message {
     async reply(content, options = {}) {
         return await this._originalMessage.reply({
             content,
-            allowedMentions: { repliedUser: false, parse: ["users"] },
+            allowedMentions: { users: [], roles: [] },
             ...options,
         });
     }
@@ -77,7 +80,7 @@ export class Message {
     async send(content, options = {}) {
         return await this._originalMessage.channel.send({
             content,
-            allowedMentions: { parse: ["users"] },
+            allowedMentions: { users: [], roles: [] },
             ...options,
         });
     }

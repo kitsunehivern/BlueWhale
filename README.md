@@ -6,3 +6,4 @@ A Hoshino-style Discord bot
 
 -   Casual chat
 -   Do math
+-   Money system

@@ -2,10 +2,10 @@ import config from "../config.js";
 
 class KeyManager {
     constructor() {
-        this.keys = config.gemini.keys;
+        this.keys = config.gemini.apiKeys || [];
         this.index = 0;
         this.failTimeoutMap = new Map();
-        this.failDuration = config.gemini.timeout;
+        this.failDuration = config.gemini.failDuration || 60000;
     }
 
     markFailed(key) {

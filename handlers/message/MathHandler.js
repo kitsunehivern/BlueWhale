@@ -1,5 +1,5 @@
 import { evaluate } from "mathjs";
-import { Message } from "../models/Message.js";
+import { Message } from "../../models/Message.js";
 
 export class MathHandler {
     constructor(services) {}

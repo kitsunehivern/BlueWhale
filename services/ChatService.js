@@ -1,15 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
+import config from "../config.js";
 import keyManager from "../utils/KeyManager.js";
 import { Message } from "../models/Message.js";
 
 export class ChatService {
-    constructor(options = {}) {
-        this.model =
-            options.model || process.env.GEMINI_API_MODEL || "gemini-2.5-flash";
+    constructor(instruction) {
+        this.model = config.gemini.apiModel || "gemini-2.5-flash";
         this.systemInstruction =
-            options.systemInstruction ||
+            instruction ||
             "You are a friendly, concise Discord chat bot. Reply in a casual style.";
-        this.maxRetries = options.maxRetries ?? 3;
+        this.maxRetries = config.gemini.maxRetries || 3;
     }
 
     async respond(historyMessages) {

@@ -1,9 +1,18 @@
+env: dev
+
 discord:
-    token: DISCORD_BOT_TOKEN
+    ownerId: YOUR_DISCORD_ID
+    botToken: YOUR_DISCORD_BOT_TOKEN
 
 gemini:
-    keys:
-        - API_KEY_1
-        - API_KEY_2
-    model: gemini-2.5-flash
-    timeout: 60000
+    apiKeys:
+        - GEMINI_API_KEY_1
+        - GEMINI_API_KEY_2
+        - GEMINI_API_KEY_3
+    apiModel: gemini-2.5-flash
+    failDuration: 60000
+    maxRetries: 3
+
+supabase:
+    url: https://YOUR_SUPABASE_PROJECT.supabase.co
+    apiKey: YOUR_SUPABASE_API_KEY

@@ -1,8 +1,8 @@
+import config from "../config.js";
 import { MessageClassifier } from "../services/MessageClassifier.js";
-import { ChatHandler } from "./ChatHandler.js";
-import { MathHandler } from "./MathHandler.js";
+import { ChatHandler } from "./message/ChatHandler.js";
+import { MathHandler } from "./message/MathHandler.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
-import { or } from "mathjs";
 
 export class MessageHandler {
     constructor(services) {
@@ -19,6 +19,7 @@ export class MessageHandler {
     async handle(message) {
         await message.loadEmbeddings();
         const category = await this.classifier.classifyMessage(message);
+
         console.log(`[${category}] ${message.preview()}`);
 
         const handler = this.handlers[category];

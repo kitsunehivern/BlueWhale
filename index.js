@@ -1,29 +1,19 @@
 import config from "./config.js";
-import {
-    Client,
-    ActivityType,
-    GatewayIntentBits,
-    PresenceUpdateStatus,
-} from "discord.js";
+import { ActivityType, PresenceUpdateStatus } from "discord.js";
+import client from "./client.js";
+import { runMiddlewares, ensureAccess } from "./middlewares/index.js";
 import { Message } from "./models/Message.js";
-import { MessageHandler } from "./handlers/MessageHandler.js";
+import { Command } from "./models/Command.js";
 import { newServices } from "./services/index.js";
-
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-    ],
-});
-
-export default client;
+import { MessageHandler } from "./handlers/MessageHandler.js";
+import { CommandHandler } from "./handlers/CommandHandler.js";
+import { deployCommands } from "./scripts/index.js";
 
 const services = newServices();
 const messageHandler = new MessageHandler(services);
+const commandHandler = new CommandHandler(services);
 
-client.once("clientReady", () => {
+client.once("clientReady", async () => {
     console.log(`Logged in as ${client.user.tag}`);
 
     client.user.setPresence({
@@ -35,19 +25,30 @@ client.once("clientReady", () => {
         ],
         status: PresenceUpdateStatus.Idle,
     });
+
+    await deployCommands();
 });
 
 client.on("messageCreate", async (discordMessage) => {
-    if (discordMessage.author.bot) {
-        return;
-    }
-
     const message = new Message(discordMessage);
-    if (!message.botWasMentioned() && !message.isCommand()) {
+
+    const ok = await runMiddlewares(message, [ensureAccess]);
+    if (!ok) {
         return;
     }
 
     await messageHandler.handle(message);
 });
 
-client.login(config.discord.token);
+client.on("interactionCreate", async (discordCommand) => {
+    const command = new Command(discordCommand);
+
+    const ok = await runMiddlewares(command, [ensureAccess]);
+    if (!ok) {
+        return;
+    }
+
+    await commandHandler.handle(command);
+});
+
+client.login(config.discord.botToken);

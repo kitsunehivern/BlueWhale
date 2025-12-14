@@ -1,4 +1,4 @@
-import client from "../index.js";
+import client from "../client.js";
 import { Message } from "../models/Message.js";
 import { LRUCache } from "lru-cache";
 
