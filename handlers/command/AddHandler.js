@@ -1,18 +1,20 @@
+import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
+import { getErrorMessage } from "../../enums/error.js";
 
 export const data = new SlashCommandBuilder()
-    .setName("adjust")
-    .setDescription("Adjust a user's balance")
+    .setName("add")
+    .setDescription("Add money to a user's balance")
     .addUserOption((option) =>
         option
             .setName("user")
-            .setDescription("The user to adjust the balance for")
+            .setDescription("The user to add money to")
             .setRequired(true)
     )
     .addIntegerOption((option) =>
         option
             .setName("amount")
-            .setDescription("The amount to adjust the balance by")
+            .setDescription("The amount to add")
             .setRequired(true)
     );
 
@@ -21,15 +23,14 @@ export async function execute(command, services) {
     const amount = command.options.getInteger("amount", true);
 
     try {
-        const newBalance = await services.balanceService.adjustUserBalance(
+        const newBalance = await services.balanceService.addUserBalance(
             user.id,
-            BigInt(amount)
+            amount
         );
         await command.reply(
-            `New balance for <@${user.id}>: \`$${newBalance}\``
+            `You added ${amount} ${config.currency.symbol} to <@${user.id}>'s balance, their new balance is ${newBalance} ${config.currency.symbol}`
         );
-    } catch (error) {
-        console.error("Error adjusting user balance", error);
-        await command.reply("Failed to adjust user balance");
+    } catch (err) {
+        await command.reply(getErrorMessage(err));
     }
 }

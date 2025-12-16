@@ -1,4 +1,6 @@
 import config from "../config.js";
+import { error } from "../enums/error.js";
+import { env } from "../enums/env.js";
 
 const allow = () => ({ ok: true });
 const deny = (message = "") => ({ ok: false, message });
@@ -21,8 +23,8 @@ export const runMiddlewares = async (request, middlewares) => {
     return true;
 };
 
-export const ensureAccess = async (request) => {
-    if (config.env === "prod") {
+export const mwAuthorization = async (request) => {
+    if (config.env === env.PROD) {
         return allow();
     }
 
@@ -30,8 +32,19 @@ export const ensureAccess = async (request) => {
         return deny();
     }
 
-    if (request.author.id !== config.discord.ownerId) {
-        return deny("Access denied!");
+    if (!config.discord.adminIds.includes(request.author.id)) {
+        return deny(error.NOT_AUTHORIZED_DEV_ENV);
+    }
+
+    return allow();
+};
+
+export const mwAdminCommand = async (request) => {
+    if (
+        config.commands.admin.includes(request.commandName) &&
+        !config.discord.adminIds.includes(request.author.id)
+    ) {
+        return deny(error.NOT_AUTHORIZED_COMMAND);
     }
 
     return allow();

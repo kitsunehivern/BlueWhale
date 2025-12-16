@@ -1,4 +1,6 @@
+import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
+import { getErrorMessage } from "../../enums/error.js";
 
 export const data = new SlashCommandBuilder()
     .setName("balance")
@@ -14,9 +16,10 @@ export async function execute(command, services) {
     const user = command.options.getUser("user", true);
     try {
         const balance = await services.balanceService.getUserBalance(user.id);
-        await command.reply(`Balance for <@${user.id}>: \`$${balance}\``);
-    } catch (error) {
-        console.error("Error fetching user balance", error);
-        await command.reply("Failed to fetch user balance");
+        await command.reply(
+            `<@${user.id}>'s current balance is ${balance} ${config.currency.symbol}`
+        );
+    } catch (err) {
+        await command.reply(getErrorMessage(err));
     }
 }

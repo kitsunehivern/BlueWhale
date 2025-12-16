@@ -1,29 +1,36 @@
+import config from "../config.js";
+import { HelperUtils } from "../utils/HelperUtils.js";
+
 export class BalanceService {
     constructor(stores) {
-        this.userBalanceStore = stores.userBalanceStore;
+        this.userStore = stores.userStore;
     }
 
     async getUserBalance(userId) {
-        return this.userBalanceStore.getBalance(userId);
+        return this.userStore.getBalance(userId);
     }
 
-    async adjustUserBalance(userId, delta) {
-        return this.userBalanceStore.adjustBalance(userId, delta);
+    async addUserBalance(userId, amount) {
+        return this.userStore.addBalance(userId, amount);
     }
 
-    async transferUserBalance(fromUserId, toUserId, amount) {
-        return this.userBalanceStore.transferBalance(
-            fromUserId,
-            toUserId,
-            amount
-        );
-    }
-
-    async stealUserBalance(thiefUserId, victimUserId) {
-        return this.userBalanceStore.stealBalance(thiefUserId, victimUserId);
+    async giveUserBalance(fromUserId, toUserId, amount) {
+        return this.userStore.giveBalance(fromUserId, toUserId, amount);
     }
 
     async getRichestUsers(limit) {
-        return this.userBalanceStore.getRichestUsers(limit);
+        return this.userStore.getRichestUsers(limit);
+    }
+
+    async claimDailyBalance(userId) {
+        const amount = HelperUtils.getRandomInt(
+            config.currency.daily.minAmount,
+            config.currency.daily.maxAmount
+        );
+        const balance = await this.userStore.claimDailyBalance(userId, amount);
+        return {
+            amount,
+            balance,
+        };
     }
 }

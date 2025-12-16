@@ -1,7 +1,11 @@
 import config from "./config.js";
 import { ActivityType, PresenceUpdateStatus } from "discord.js";
 import client from "./client.js";
-import { runMiddlewares, ensureAccess } from "./middlewares/index.js";
+import {
+    runMiddlewares,
+    mwAuthorization,
+    mwAdminCommand,
+} from "./middlewares/index.js";
 import { Message } from "./models/Message.js";
 import { Command } from "./models/Command.js";
 import { newServices } from "./services/index.js";
@@ -32,7 +36,7 @@ client.once("clientReady", async () => {
 client.on("messageCreate", async (discordMessage) => {
     const message = new Message(discordMessage);
 
-    const ok = await runMiddlewares(message, [ensureAccess]);
+    const ok = await runMiddlewares(message, [mwAuthorization]);
     if (!ok) {
         return;
     }
@@ -43,7 +47,7 @@ client.on("messageCreate", async (discordMessage) => {
 client.on("interactionCreate", async (discordCommand) => {
     const command = new Command(discordCommand);
 
-    const ok = await runMiddlewares(command, [ensureAccess]);
+    const ok = await runMiddlewares(command, [mwAuthorization, mwAdminCommand]);
     if (!ok) {
         return;
     }

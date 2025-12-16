@@ -1,7 +1,9 @@
+import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
+import { getErrorMessage } from "../../enums/error.js";
 
 export const data = new SlashCommandBuilder()
-    .setName("richest")
+    .setName("rich")
     .setDescription("Displays the richest users")
     .addIntegerOption((option) =>
         option
@@ -21,13 +23,13 @@ export async function execute(command, services) {
         );
 
         const lines = richestUsers.map((row, i) => {
-            const bal = BigInt(row.balance);
-            return `${i + 1}. <@${row.userId}> - \`$${bal}\``;
+            return `${i + 1}. <@${row.userId}> - ${row.balance} ${
+                config.currency.symbol
+            }`;
         });
 
         await command.reply(`Richest users:\n${lines.join("\n")}`);
-    } catch (error) {
-        console.error("Error fetching richest users", error);
-        await command.reply("Failed to fetch richest users");
+    } catch (err) {
+        await command.reply(getErrorMessage(err));
     }
 }
