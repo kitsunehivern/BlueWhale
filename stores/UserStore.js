@@ -52,7 +52,7 @@ export class UserStore {
     async getRichestUsers(limit = 10) {
         const { data, error } = await this.db
             .from(this.table)
-            .select("user_id::text, balance")
+            .select("user_id, balance")
             .gt("balance", 0)
             .order("balance", { ascending: false })
             .limit(limit);

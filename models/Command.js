@@ -6,7 +6,7 @@ export class Command {
         this.channelId = command.channelId;
         this.channelName = command.channel?.name;
         this.guildId = command.guildId;
-        this.author = command.user
+        this.user = command.user
             ? {
                   id: command.user.id,
                   username: command.user.username,
@@ -47,6 +47,6 @@ export class Command {
     }
 
     preview() {
-        return `${this.channelName}/${this.author.username}`;
+        return `${this.channelName}/${this.user.username}`;
     }
 }

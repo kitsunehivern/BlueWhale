@@ -9,7 +9,7 @@ export class Message {
         this.channelId = message.channelId;
         this.channelName = message.channel?.name;
         this.guildId = message.guildId;
-        this.author = message.author
+        this.user = message.author
             ? {
                   id: message.author.id,
                   username: message.author.username,
@@ -151,7 +151,7 @@ export class Message {
 
     getAIFormat() {
         return {
-            role: this.author.id === client.user.id ? "model" : "user",
+            role: this.user.id === client.user.id ? "model" : "user",
             parts: [
                 { text: this.cleanContent },
                 ...this.getAIAttachments(),
@@ -161,7 +161,7 @@ export class Message {
     }
 
     preview() {
-        return `${this.channelName}/${this.author.username}: ${
+        return `${this.channelName}/${this.user.username}: ${
             this.cleanContent.length > 50
                 ? `${this.cleanContent.substring(0, 50)}...`
                 : this.cleanContent

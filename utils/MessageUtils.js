@@ -1,4 +1,5 @@
 import axios from "axios";
+import fs from "fs";
 
 export class MessageUtils {
     static async getAttachments(message) {
@@ -27,72 +28,110 @@ export class MessageUtils {
         });
     }
 
-    static splitMessage(message) {
-        const MAX_LENGTH = 2000;
-        const lines = message.split("\n");
+    static splitMessage(message, maxLength = 2000) {
+        message = String(message ?? "").replace(/\r\n/g, "\n");
+
         const chunks = [];
+        const lines = message.split("\n");
 
-        let currentChunk = "";
-        let insideCodeBlock = false;
-        let codeBlockLang = "";
+        const CODE_FENCE_RE = /^```([^\s`]*)\s*$/;
 
-        const openCodeBlock = (lang = "") => `\`\`\`${lang}`;
-        const closeCodeBlock = () => "```";
+        let chunk = "";
+        let inCode = false;
+        let lang = "";
 
-        const flushChunk = () => {
-            if (currentChunk.trim()) {
-                if (insideCodeBlock) currentChunk += closeCodeBlock() + "\n";
-                chunks.push(currentChunk.trimEnd());
-                currentChunk = insideCodeBlock
-                    ? openCodeBlock(codeBlockLang) + "\n"
-                    : "";
+        const openFence = () => "```" + (lang || "") + "\n";
+        const reservedCloseLen = 4;
+
+        const pushChunk = (text) => {
+            const out = text.replace(/\n+$/g, "");
+            if (out.length) chunks.push(out);
+        };
+
+        const flush = () => {
+            let out = chunk;
+
+            if (inCode) {
+                if (!out.endsWith("\n")) out += "\n";
+                out += "```";
+            }
+
+            pushChunk(out);
+
+            chunk = inCode ? openFence() : "";
+        };
+
+        const limitForCurrentState = () =>
+            inCode ? maxLength - reservedCloseLen : maxLength;
+
+        const appendLine = (line) => {
+            let remaining = line;
+
+            while (true) {
+                const limit = limitForCurrentState();
+                const needed = remaining.length + 1; // + "\n"
+
+                if (chunk.length + needed <= limit) {
+                    chunk += remaining + "\n";
+                    return;
+                }
+
+                let available = limit - chunk.length - 1;
+                if (available <= 0) {
+                    flush();
+                    continue;
+                }
+
+                let piece = remaining.slice(0, available);
+
+                if (!inCode) {
+                    const lastSpace = piece.lastIndexOf(" ");
+                    if (lastSpace > 0) piece = piece.slice(0, lastSpace);
+                }
+
+                if (piece.length === 0) piece = remaining.slice(0, available);
+
+                chunk += piece + "\n";
+                remaining = remaining.slice(piece.length);
+                if (!inCode) remaining = remaining.trimStart();
+
+                flush();
             }
         };
 
-        for (let line of lines) {
-            const trimmedLine = line.trim();
+        for (const line of lines) {
+            const trimmed = line.trim();
+            const fence = trimmed.match(CODE_FENCE_RE);
 
-            const codeMatch = trimmedLine.match(/^```(\w*)?$/);
-            if (codeMatch) {
-                if (insideCodeBlock) {
-                    currentChunk += line + "\n";
-                    insideCodeBlock = false;
-                    codeBlockLang = "";
+            if (fence) {
+                if (chunk.length + line.length + 1 > maxLength) flush();
+
+                if (!inCode) {
+                    inCode = true;
+                    lang = fence[1] || "";
+                    chunk += line + "\n";
                 } else {
-                    insideCodeBlock = true;
-                    codeBlockLang = codeMatch[1] || "";
-                    currentChunk += line + "\n";
+                    chunk += line + "\n";
+                    inCode = false;
+                    lang = "";
                 }
                 continue;
             }
 
-            if ((currentChunk + line + "\n").length > MAX_LENGTH) {
-                flushChunk();
-            }
+            if (chunk.length + line.length + 1 > limitForCurrentState())
+                flush();
 
-            while (line.length > MAX_LENGTH - 10) {
-                let breakPoint = line.lastIndexOf(" ", MAX_LENGTH - 10);
-                if (breakPoint === -1) breakPoint = MAX_LENGTH - 10;
-
-                let segment = line.slice(0, breakPoint);
-                if (insideCodeBlock) {
-                    currentChunk += segment + "\n" + closeCodeBlock();
-                    chunks.push(currentChunk.trimEnd());
-                    currentChunk = openCodeBlock(codeBlockLang) + "\n";
-                } else {
-                    chunks.push((currentChunk + segment).trimEnd());
-                    currentChunk = "";
-                }
-
-                line = line.slice(breakPoint).trimStart();
-            }
-
-            currentChunk += line + "\n";
+            appendLine(line);
         }
 
-        if (currentChunk.trim()) {
-            if (insideCodeBlock) currentChunk += closeCodeBlock();
-            chunks.push(currentChunk.trimEnd());
+        if (chunk.length) {
+            if (inCode) {
+                if (!chunk.endsWith("\n")) chunk += "\n";
+                chunk += "```";
+                inCode = false;
+                lang = "";
+            }
+            pushChunk(chunk);
         }
 
         return chunks;

@@ -58,7 +58,7 @@ export class ChatService {
                 const response = await ai.models.generateContent(request);
                 return response;
             } catch (err) {
-                console.error("Error calling Gemini API", err);
+                console.error("Error calling Gemini API", err.message);
                 keyManager.markFailed(apiKey);
             }
         }

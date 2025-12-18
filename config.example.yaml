@@ -27,3 +27,9 @@ currency:
     daily:
         minAmount: -1000
         maxAmount: 1000
+
+game:
+    baucua:
+        minDuration: 10
+        maxDuration: 60
+        defaultDuration: 30

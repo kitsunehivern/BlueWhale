@@ -31,6 +31,7 @@ client.once("clientReady", async () => {
     });
 
     await deployCommands();
+    await services.baucuaService.init();
 });
 
 client.on("messageCreate", async (discordMessage) => {

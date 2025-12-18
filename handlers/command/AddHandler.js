@@ -1,6 +1,6 @@
 import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../enums/error.js";
+import { getErrorMessage } from "../../consts/error.js";
 
 export const data = new SlashCommandBuilder()
     .setName("add")

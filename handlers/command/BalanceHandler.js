@@ -1,6 +1,6 @@
 import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../enums/error.js";
+import { getErrorMessage } from "../../consts/error.js";
 
 export const data = new SlashCommandBuilder()
     .setName("balance")
@@ -9,15 +9,16 @@ export const data = new SlashCommandBuilder()
         option
             .setName("user")
             .setDescription("The user to get the balance for")
-            .setRequired(true)
+            .setRequired(false)
     );
 
 export async function execute(command, services) {
-    const user = command.options.getUser("user", true);
+    const user = command.options.getUser("user", false) || command.user;
+    const mention = user.id === command.user.id ? "Your" : `<@${user.id}>'s`;
     try {
         const balance = await services.balanceService.getUserBalance(user.id);
         await command.reply(
-            `<@${user.id}>'s current balance is ${balance} ${config.currency.symbol}`
+            `${mention} current balance is ${balance} ${config.currency.symbol}`
         );
     } catch (err) {
         await command.reply(getErrorMessage(err));

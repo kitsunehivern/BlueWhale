@@ -1,6 +1,6 @@
 import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../enums/error.js";
+import { getErrorMessage } from "../../consts/error.js";
 
 export const data = new SlashCommandBuilder()
     .setName("give")
@@ -25,7 +25,7 @@ export async function execute(command, services) {
 
     try {
         const result = await services.balanceService.giveUserBalance(
-            command.author.id,
+            command.user.id,
             user.id,
             amount
         );
