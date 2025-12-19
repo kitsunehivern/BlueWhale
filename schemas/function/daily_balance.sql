@@ -6,7 +6,6 @@ create or replace function public.daily_balance(
 )
 returns bigint
 language plpgsql
-set search_path = public
 as $$
 declare
   v_today_utc date := (now() at time zone 'utc')::date;

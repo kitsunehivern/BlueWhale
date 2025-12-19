@@ -161,9 +161,10 @@ export class BaucuaService {
         const betMap = this._groupBets(bets);
 
         const embed = new EmbedBuilder()
+            .setColor(0x0000ff)
             .setTitle("Bầu cua")
             .setDescription(
-                `Place bets with /place <symbol> <amount>\nEnds <t:${endsAt}:R>`
+                `Place bets with \`/place <symbol> <amount>\`. Round ends <t:${endsAt}:R>`
             )
             .setFooter({ text: `Channel: ${game.channel_id}` });
 
@@ -178,9 +179,10 @@ export class BaucuaService {
         const betMap = this._groupBets(bets);
         const diceLabels = dice
             .map((k) => SYMBOLS.find((a) => a.key === k)?.label || k)
-            .join(" • ");
+            .join(", ");
 
         const embed = new EmbedBuilder()
+            .setColor(0x00ff00)
             .setTitle("Bầu cua - Result")
             .setDescription(
                 `
@@ -202,6 +204,7 @@ ${this._renderSummary(summaryRows)}
         const betMap = this._groupBets(bets);
 
         const embed = new EmbedBuilder()
+            .setColor(0xff0000)
             .setTitle("Bầu cua - Refunded")
             .setDescription(
                 "This game was refunded due to bot restart/crash. All placed bets were returned."

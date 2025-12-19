@@ -7,7 +7,6 @@ create or replace function public.give_balance(
 )
 returns table (from_balance bigint, to_balance bigint)
 language plpgsql
-set search_path = public
 as $$
 begin
   if p_amount <= 0 then

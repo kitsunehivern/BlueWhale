@@ -1,10 +1,10 @@
-drop function if exists public.create_user(text);
+drop function if exists public.ensure_user_row(text);
 
-create or replace function public.create_user(p_user_id text)
+create or replace function public.ensure_user_row(
+  p_user_id text
+)
 returns void
 language plpgsql
-security definer
-set search_path = public
 as $$
 begin
   insert into public.users (user_id, balance)

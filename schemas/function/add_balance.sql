@@ -6,7 +6,6 @@ create or replace function public.update_user_balance(
 )
 returns bigint
 language plpgsql
-set search_path = public
 as $$
 declare
   new_balance bigint;
