@@ -127,4 +127,14 @@ export class BaucuaStore {
 
         return data;
     }
+
+    async getStats() {
+        const { data, error } = await this.db.rpc("get_baucua_stats");
+
+        if (error) {
+            throw error;
+        }
+
+        return Array.isArray(data) ? data[0] : data;
+    }
 }

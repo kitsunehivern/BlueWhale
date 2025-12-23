@@ -1,6 +1,5 @@
 import config from "../config.js";
 import client from "../client.js";
-import { error } from "../consts/error.js";
 import { EmbedBuilder } from "discord.js";
 
 const SYMBOLS = [
@@ -232,14 +231,8 @@ ${this._renderSummary(summaryRows)}
 
     _renderSymbolField(symbol, betMap) {
         const userToAmount = betMap.get(symbol.key) || new Map();
-
-        let total = 0;
-        for (const amount of userToAmount.values()) {
-            total += Number(amount);
-        }
-
         return {
-            name: `${symbol.label} - ${total} ${config.currency.symbol}`,
+            name: `${symbol.label}`,
             value: this._renderUserBetList(userToAmount),
             inline: true,
         };
@@ -255,7 +248,7 @@ ${this._renderSummary(summaryRows)}
         const shown = entries.slice(0, maxLines);
         const lines = shown.map(
             ([userId, amount]) =>
-                `<@${userId}> - ${Number(amount)} ${config.currency.symbol}`
+                `<@${userId}> ${Number(amount)} ${config.currency.symbol}`
         );
 
         if (entries.length > maxLines) {
@@ -275,9 +268,69 @@ ${this._renderSummary(summaryRows)}
             .map((r) => {
                 const net = Number(r.net_change);
                 const sign = net >= 0 ? "+" : "";
-                return `<@${r.user_id}>: ${sign}${net} ${config.currency.symbol}`;
+                return `<@${r.user_id}> ${sign}${net} ${config.currency.symbol}`;
             });
 
         return lines.slice(0, 30).join("\n");
+    }
+
+    async getStats() {
+        return this.baucuaStore.getStats();
+    }
+
+    async getStats() {
+        return this.baucuaStore.getStats();
+    }
+
+    buildStatsEmbed(stats) {
+        const embed = new EmbedBuilder()
+            .setTitle("Bầu cua - Statistics")
+            .setDescription("Scope: **all servers**")
+            .addFields(
+                {
+                    name: "Games",
+                    value: `${Number(stats.games || 0)}`,
+                    inline: true,
+                },
+                {
+                    name: "Bets",
+                    value: `${Number(stats.bets || 0)}`,
+                    inline: true,
+                },
+                { name: "\u200B", value: "\u200B", inline: true },
+
+                {
+                    name: "Nai",
+                    value: `${Number(stats.stag || 0)}`,
+                    inline: true,
+                },
+                {
+                    name: "Bầu",
+                    value: `${Number(stats.calabash || 0)}`,
+                    inline: true,
+                },
+                {
+                    name: "Gà",
+                    value: `${Number(stats.cock || 0)}`,
+                    inline: true,
+                },
+                {
+                    name: "Cá",
+                    value: `${Number(stats.fish || 0)}`,
+                    inline: true,
+                },
+                {
+                    name: "Cua",
+                    value: `${Number(stats.crab || 0)}`,
+                    inline: true,
+                },
+                {
+                    name: "Tôm",
+                    value: `${Number(stats.prawn || 0)}`,
+                    inline: true,
+                }
+            );
+
+        return embed;
     }
 }
