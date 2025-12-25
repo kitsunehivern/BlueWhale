@@ -22,15 +22,17 @@ export async function execute(command, services) {
     const user = command.options.getUser("user", true);
     const amount = command.options.getInteger("amount", true);
 
+    await command.deferReply();
     try {
         const newBalance = await services.balanceService.addUserBalance(
             user.id,
             amount
         );
-        await command.reply(
+
+        await command.editReply(
             `You added ${amount} ${config.currency.symbol} to <@${user.id}>'s balance, their new balance is ${newBalance} ${config.currency.symbol}`
         );
     } catch (err) {
-        await command.reply(getErrorMessage(err));
+        await command.editReply(getErrorMessage(err));
     }
 }

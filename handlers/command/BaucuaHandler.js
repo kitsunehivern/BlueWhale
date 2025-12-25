@@ -19,6 +19,7 @@ export async function execute(command, services) {
         command.options.getInteger("duration") ||
         config.game.baucua.defaultDuration;
 
+    await command.deferReply();
     try {
         const game = await services.baucuaService.startGame(
             command.channelId,
@@ -28,16 +29,13 @@ export async function execute(command, services) {
 
         const embed = services.baucuaService.buildGameEmbed(game, []);
 
-        const message = await command.reply(" ", {
+        const message = await command.editReply(" ", {
             embeds: [embed],
             withResponse: true,
         });
 
-        await services.baucuaService.attachGameMessage(
-            game.id,
-            message.resource.message.id
-        );
+        await services.baucuaService.attachGameMessage(game.id, message.id);
     } catch (err) {
-        await command.reply(getErrorMessage(err));
+        await command.editReply(getErrorMessage(err));
     }
 }

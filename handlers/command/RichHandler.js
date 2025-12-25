@@ -17,6 +17,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(command, services) {
     const limit = command.options.getInteger("limit") || 10;
 
+    await command.deferReply();
     try {
         const richestUsers = await services.balanceService.getRichestUsers(
             limit
@@ -28,8 +29,8 @@ export async function execute(command, services) {
             }`;
         });
 
-        await command.reply(`Richest users:\n${lines.join("\n")}`);
+        await command.editReply(`Richest users:\n${lines.join("\n")}`);
     } catch (err) {
-        await command.reply(getErrorMessage(err));
+        await command.editReply(getErrorMessage(err));
     }
 }

@@ -31,6 +31,7 @@ export async function execute(command, services) {
     const symbol = command.options.getString("symbol", true);
     const amount = command.options.getInteger("amount", true);
 
+    await command.deferReply();
     try {
         await services.baucuaService.placeBet(
             command.channelId,
@@ -39,10 +40,10 @@ export async function execute(command, services) {
             amount
         );
 
-        await command.reply(
+        await command.editReply(
             `You placed a bet of ${amount} ${config.currency.symbol} on ${symbol}`
         );
     } catch (err) {
-        await command.reply(getErrorMessage(err));
+        await command.editReply(getErrorMessage(err));
     }
 }

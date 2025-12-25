@@ -6,12 +6,13 @@ export const data = new SlashCommandBuilder()
     .setDescription("Show bầu cua statistics");
 
 export async function execute(command, services) {
+    await command.deferReply();
     try {
         const stats = await services.baucuaService.getStats();
         const embed = services.baucuaService.buildStatsEmbed(stats);
 
-        await command.reply(" ", { embeds: [embed] });
+        await command.editReply(" ", { embeds: [embed] });
     } catch (error) {
-        await command.reply(getErrorMessage(error));
+        await command.editReply(getErrorMessage(error));
     }
 }

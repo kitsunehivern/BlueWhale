@@ -23,16 +23,18 @@ export async function execute(command, services) {
     const user = command.options.getUser("user", true);
     const amount = command.options.getInteger("amount", true);
 
+    await command.deferReply();
     try {
         const result = await services.balanceService.giveUserBalance(
             command.user.id,
             user.id,
             amount
         );
-        await command.reply(
+
+        await command.editReply(
             `You gave ${amount} ${config.currency.symbol} to <@${user.id}>, your new balance is ${result.fromBalance} ${config.currency.symbol} and <@${user.id}>'s new balance is ${result.toBalance} ${config.currency.symbol}`
         );
     } catch (err) {
-        await command.reply(getErrorMessage(err));
+        await command.editReply(getErrorMessage(err));
     }
 }

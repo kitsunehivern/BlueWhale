@@ -15,12 +15,15 @@ export const data = new SlashCommandBuilder()
 export async function execute(command, services) {
     const user = command.options.getUser("user", false) || command.user;
     const mention = user.id === command.user.id ? "Your" : `<@${user.id}>'s`;
+
+    await command.deferReply();
     try {
         const balance = await services.balanceService.getUserBalance(user.id);
-        await command.reply(
+
+        await command.editReply(
             `${mention} current balance is ${balance} ${config.currency.symbol}`
         );
     } catch (err) {
-        await command.reply(getErrorMessage(err));
+        await command.editReply(getErrorMessage(err));
     }
 }
