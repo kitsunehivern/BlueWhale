@@ -163,7 +163,7 @@ export class BaucuaService {
             .setColor(0x0000ff)
             .setTitle("Bầu cua")
             .setDescription(
-                `Place bets with \`/place <symbol> <amount>\`. Round ends <t:${endsAt}:R>`
+                `Place bets with \`/place <symbol> <amount>\`. Round ends <t:${endsAt}:R>\n${this._buildSeperator()}`
             )
             .setFooter({ text: `Channel: ${game.channel_id}` });
 
@@ -185,10 +185,10 @@ export class BaucuaService {
             .setTitle("Bầu cua - Result")
             .setDescription(
                 `
-Dice: **${diceLabels}**
-
+**Dice**: ${diceLabels}
 **Payouts**:
 ${this._renderSummary(summaryRows)}
+${this._buildSeperator()}
                 `.trim()
             );
 
@@ -206,7 +206,7 @@ ${this._renderSummary(summaryRows)}
             .setColor(0xff0000)
             .setTitle("Bầu cua - Refunded")
             .setDescription(
-                "This game was refunded due to bot restart/crash. All placed bets were returned."
+                `This game was refunded due to bot restart/crash. All placed bets were returned.\n${this._buildSeperator()}`
             );
 
         for (const symbol of SYMBOLS) {
@@ -332,5 +332,9 @@ ${this._renderSummary(summaryRows)}
             );
 
         return embed;
+    }
+
+    _buildSeperator() {
+        return "-".repeat(80);
     }
 }

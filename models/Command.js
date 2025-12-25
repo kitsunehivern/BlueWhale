@@ -4,7 +4,7 @@ export class Command {
         this.commandName = command.commandName;
         this.options = command.options;
         this.channelId = command.channelId;
-        this.channelName = command.channel?.name;
+        this.channelName = command.channel?.name || "DM";
         this.guildId = command.guildId;
         this.user = command.user
             ? {

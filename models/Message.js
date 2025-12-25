@@ -7,7 +7,7 @@ export class Message {
         this.content = message.content;
         this.cleanContent = this._cleanContent(message.content);
         this.channelId = message.channelId;
-        this.channelName = message.channel?.name;
+        this.channelName = message.channel?.name || "DM";
         this.guildId = message.guildId;
         this.user = message.author
             ? {
