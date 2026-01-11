@@ -37,7 +37,7 @@ client.once("clientReady", async () => {
 client.on("messageCreate", async (discordMessage) => {
     const message = new Message(discordMessage);
 
-    const ok = await runMiddlewares(message, [mwAuthorization]);
+    const ok = await runMiddlewares(message, [mwAuthorization, mwAdminCommand]);
     if (!ok) {
         return;
     }

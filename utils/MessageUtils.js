@@ -1,5 +1,4 @@
 import axios from "axios";
-import fs from "fs";
 
 export class MessageUtils {
     static async getAttachments(message) {
@@ -243,7 +242,13 @@ export class MessageUtils {
         return "```\n" + table.join("\n") + "\n```";
     }
 
-    static delay(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
+    static tokenizeArgs(message) {
+        const args = [];
+        const regex = /"([^"]+)"|'([^']+)'|`([^`]+)`|(\S+)/g;
+        let match;
+        while ((match = regex.exec(message)) !== null) {
+            args.push(match[1] || match[2] || match[3] || match[4]);
+        }
+        return args;
     }
 }

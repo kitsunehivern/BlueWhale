@@ -90,7 +90,7 @@ export class BaucuaService {
             try {
                 await this.finishGame(game.id);
             } catch (e) {
-                console.error("Failed to finish baucua game", e);
+                console.log("Failed to finish baucua game", e);
             }
         }, delay);
 

@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import config from "../config.js";
 import keyManager from "../utils/KeyManager.js";
-import { Message } from "../models/Message.js";
 
 export class ChatService {
     constructor(instruction) {
@@ -14,7 +13,7 @@ export class ChatService {
 
     async respond(historyMessages) {
         if (!Array.isArray(historyMessages) || historyMessages.length === 0) {
-            console.error("History messages are required");
+            console.log("History messages are required");
             return null;
         }
 
@@ -39,16 +38,14 @@ export class ChatService {
             replyText = String(response.text || "").trim() || "...";
         }
 
-        return new Message({
-            content: replyText,
-        });
+        return replyText;
     }
 
     async _generateWithRetries(request) {
         for (let attempt = 0; attempt < this.maxRetries; attempt++) {
             const apiKey = keyManager.getKey();
             if (!apiKey) {
-                console.error("No active Gemini API keys available");
+                console.log("No active Gemini API keys available");
                 return null;
             }
 
@@ -58,12 +55,12 @@ export class ChatService {
                 const response = await ai.models.generateContent(request);
                 return response;
             } catch (err) {
-                console.error("Error calling Gemini API", err.message);
+                console.log("Error calling Gemini API:", err.message);
                 keyManager.markFailed(apiKey);
             }
         }
 
-        console.error("Exceeded maximum retries for Gemini API");
+        console.log("Exceeded maximum retries for Gemini API");
         return null;
     }
 }

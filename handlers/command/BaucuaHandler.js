@@ -1,6 +1,8 @@
 import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../consts/error.js";
+import { error, getErrorMessage } from "../../consts/error.js";
+import { TokenUtils } from "../../utils/TokenUtils.js";
+import { sprintf } from "sprintf-js";
 
 export const data = new SlashCommandBuilder()
     .setName("baucua")
@@ -19,23 +21,42 @@ export async function execute(command, services) {
         command.options.getInteger("duration") ||
         config.game.baucua.defaultDuration;
 
-    await command.deferReply();
+    await handleBaucua(command, services, [durationSeconds]);
+}
+
+export async function handleBaucua(request, services, args) {
+    const usage = `${config.command.prefix} baucua [duration]`;
+
+    if (args.length > 1) {
+        request.reply(sprintf(error.INVALID_COMMAND_USAGE, usage));
+        return;
+    }
+
     try {
+        const durationSeconds =
+            args.length > 0
+                ? TokenUtils.getInteger(
+                      args[0],
+                      config.game.baucua.minDuration,
+                      config.game.baucua.maxDuration
+                  )
+                : config.game.baucua.defaultDuration;
+
         const game = await services.baucuaService.startGame(
-            command.channelId,
-            command.user.id,
+            request.channelId,
+            request.user.id,
             durationSeconds
         );
 
         const embed = services.baucuaService.buildGameEmbed(game, []);
 
-        const message = await command.editReply(" ", {
+        const message = await request.reply(" ", {
             embeds: [embed],
             withResponse: true,
         });
 
         await services.baucuaService.attachGameMessage(game.id, message.id);
     } catch (err) {
-        await command.editReply(getErrorMessage(err));
+        request.reply(getErrorMessage(err));
     }
 }

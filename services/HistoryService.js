@@ -2,17 +2,14 @@ import client from "../client.js";
 import { Message } from "../models/Message.js";
 import { LRUCache } from "lru-cache";
 
-const options = {
-    max: 100,
-    ttl: 1000 * 60 * 60,
-    allowStale: false,
-    updateAgeOnGet: true,
-    updateAgeOnHas: true,
-};
-
 export class HistoryService {
     constructor() {
-        this.cache = new LRUCache(options);
+        this.cache = new LRUCache({
+            max: 100,
+            ttl: 1000 * 60 * 60,
+            updateAgeOnGet: true,
+            updateAgeOnHas: true,
+        });
     }
 
     async getHistory(message) {
@@ -34,7 +31,7 @@ export class HistoryService {
                 history.push(message);
             }
         } catch (err) {
-            console.error("Error fetching message history", err);
+            console.log("Error fetching message history:", err);
         }
 
         history.reverse();

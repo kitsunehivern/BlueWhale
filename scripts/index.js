@@ -19,7 +19,7 @@ export async function deployCommands() {
 async function loadSlashCommands(client) {
     const dir = path.join("handlers", "command");
     if (!fs.existsSync(dir)) {
-        console.error(`Commands directory not found: ${dir}`);
+        console.log(`Commands directory not found: ${dir}`);
         return;
     }
 

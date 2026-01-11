@@ -1,3 +1,4 @@
+import config from "../config.js";
 import client from "../client.js";
 import { MessageUtils } from "../utils/MessageUtils.js";
 
@@ -30,6 +31,14 @@ export class Message {
             : undefined;
 
         this._originalMessage = message;
+
+        if (this.isCommand()) {
+            this.args = MessageUtils.tokenizeArgs(
+                this.cleanContent.slice(config.command.prefix.length)
+            );
+            this.messageName =
+                this.args.length > 0 ? this.args[0].toLowerCase() : null;
+        }
     }
 
     shouldProcess() {
@@ -62,7 +71,7 @@ export class Message {
     }
 
     isCommand() {
-        return this.getCleanContent().startsWith("=");
+        return this.getCleanContent().startsWith(config.command.prefix);
     }
 
     getBotMentionPattern(botUserId) {
@@ -70,19 +79,55 @@ export class Message {
     }
 
     async reply(content, options = {}) {
-        return await this._originalMessage.reply({
-            content,
-            allowedMentions: { users: [], roles: [] },
-            ...options,
-        });
+        const chunks = MessageUtils.formatMessage(content);
+        let lastMessage = this._originalMessage;
+        for (let i = 0; i < chunks.length; i++) {
+            await this.sendTyping();
+
+            if (!this.isCommand()) {
+                await new Promise((resolve) =>
+                    setTimeout(resolve, Math.min(chunks[i].length * 4, 8000))
+                );
+            }
+
+            lastMessage = await lastMessage.reply({
+                content: chunks[i],
+                allowedMentions: { users: [], roles: [] },
+                ...(i === chunks.length - 1 ? options : {}),
+            });
+        }
+
+        return lastMessage;
     }
 
     async send(content, options = {}) {
-        return await this._originalMessage.channel.send({
-            content,
-            allowedMentions: { users: [], roles: [] },
-            ...options,
-        });
+        const chunks = MessageUtils.formatMessage(content);
+        let lastMessage = this._originalMessage;
+        for (let i = 0; i < chunks.length; i++) {
+            await this.sendTyping();
+
+            if (!this.isCommand()) {
+                await new Promise((resolve) =>
+                    setTimeout(resolve, Math.min(chunks[i].length * 4, 8000))
+                );
+            }
+
+            if (i === 0) {
+                lastMessage = await this._originalMessage.channel.send({
+                    content: chunks[i],
+                    allowedMentions: { users: [], roles: [] },
+                    ...(i === chunks.length - 1 ? options : {}),
+                });
+            } else {
+                lastMessage = await this._originalMessage.channel.send({
+                    content: chunks[i],
+                    allowedMentions: { users: [], roles: [] },
+                    ...(i === chunks.length - 1 ? options : {}),
+                });
+            }
+        }
+
+        return lastMessage;
     }
 
     async sendTyping() {
@@ -161,9 +206,11 @@ export class Message {
     }
 
     preview() {
-        return `${this.channelName}/${this.user.username}: ${
-            this.cleanContent.length > 50
-                ? `${this.cleanContent.substring(0, 50)}...`
+        return `[message: ${this.messageName}] ${this.channelName}/${
+            this.user.username
+        }: ${
+            this.cleanContent.length > 100
+                ? `${this.cleanContent.substring(0, 100)}...`
                 : this.cleanContent
         }`;
     }

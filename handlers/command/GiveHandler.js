@@ -1,6 +1,8 @@
 import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../consts/error.js";
+import { error, getErrorMessage } from "../../consts/error.js";
+import { TokenUtils } from "../../utils/TokenUtils.js";
+import { sprintf } from "sprintf-js";
 
 export const data = new SlashCommandBuilder()
     .setName("give")
@@ -17,24 +19,42 @@ export const data = new SlashCommandBuilder()
             .setDescription("The amount to give")
             .setRequired(true)
             .setMinValue(1)
+            .setMaxValue(config.currency.usage.maxAmount)
     );
 
 export async function execute(command, services) {
     const user = command.options.getUser("user", true);
     const amount = command.options.getInteger("amount", true);
 
-    await command.deferReply();
+    await handleGive(command, services, [`<@${user.id}>`, amount]);
+}
+
+export async function handleGive(request, services, args) {
+    const usage = `${config.command.prefix} give <user> <amount>`;
+
+    if (args.length != 2) {
+        request.reply(sprintf(error.INVALID_COMMAND_USAGE, usage));
+        return;
+    }
+
     try {
+        const user = await TokenUtils.getUser(args[0]);
+        const amount = TokenUtils.getInteger(
+            args[1],
+            1,
+            config.currency.usage.maxAmount
+        );
+
         const result = await services.balanceService.giveUserBalance(
-            command.user.id,
+            request.user.id,
             user.id,
             amount
         );
 
-        await command.editReply(
+        await request.reply(
             `You gave ${amount} ${config.currency.symbol} to <@${user.id}>, your new balance is ${result.fromBalance} ${config.currency.symbol} and <@${user.id}>'s new balance is ${result.toBalance} ${config.currency.symbol}`
         );
     } catch (err) {
-        await command.editReply(getErrorMessage(err));
+        await request.reply(getErrorMessage(err));
     }
 }

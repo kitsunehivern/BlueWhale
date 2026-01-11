@@ -39,8 +39,9 @@ export const mwAuthorization = async (request) => {
 };
 
 export const mwAdminCommand = async (request) => {
+    const commandName = request.commandName || request.messageName;
     if (
-        config.command.admin.includes(request.commandName) &&
+        config.command.admin.includes(commandName) &&
         !config.discord.adminIds.includes(request.user.id)
     ) {
         return deny(error.NOT_AUTHORIZED_COMMAND);

@@ -24,29 +24,21 @@ export class Command {
         return this._originalCommand;
     }
 
-    reply(content, options = {}) {
-        return this._originalCommand.reply({
+    async reply(content, options = {}) {
+        return await this._originalCommand.editReply({
             content,
             allowedMentions: { users: [], roles: [] },
             ...options,
         });
     }
 
-    editReply(content, options = {}) {
-        return this._originalCommand.editReply({
-            content,
-            allowedMentions: { users: [], roles: [] },
-            ...options,
-        });
-    }
-
-    deferReply(options = {}) {
-        return this._originalCommand.deferReply({
+    async sendTyping(options = {}) {
+        return await this._originalCommand.deferReply({
             ...options,
         });
     }
 
     preview() {
-        return `${this.channelName}/${this.user.username}`;
+        return `[command: ${this.commandName}] ${this.channelName}/${this.user.username}`;
     }
 }

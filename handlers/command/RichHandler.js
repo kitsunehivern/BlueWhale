@@ -1,6 +1,8 @@
 import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../consts/error.js";
+import { error, getErrorMessage } from "../../consts/error.js";
+import { TokenUtils } from "../../utils/TokenUtils.js";
+import { sprintf } from "sprintf-js";
 
 export const data = new SlashCommandBuilder()
     .setName("rich")
@@ -17,8 +19,21 @@ export const data = new SlashCommandBuilder()
 export async function execute(command, services) {
     const limit = command.options.getInteger("limit") || 10;
 
-    await command.deferReply();
+    await handleRich(command, services, [limit]);
+}
+
+export async function handleRich(request, services, args) {
+    const usage = `${config.command.prefix} rich [limit]`;
+
+    if (args.length > 1) {
+        request.reply(sprintf(error.INVALID_COMMAND_USAGE, usage));
+        return;
+    }
+
     try {
+        const limit =
+            args.length > 0 ? TokenUtils.getInteger(args[0], 1, 20) : 10;
+
         const richestUsers = await services.balanceService.getRichestUsers(
             limit
         );
@@ -29,8 +44,8 @@ export async function execute(command, services) {
             }`;
         });
 
-        await command.editReply(`Richest users:\n${lines.join("\n")}`);
+        await request.reply(`Richest users:\n${lines.join("\n")}`);
     } catch (err) {
-        await command.editReply(getErrorMessage(err));
+        await request.reply(getErrorMessage(err));
     }
 }

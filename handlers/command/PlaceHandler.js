@@ -1,6 +1,8 @@
 import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../consts/error.js";
+import { error, getErrorMessage } from "../../consts/error.js";
+import { TokenUtils } from "../../utils/TokenUtils.js";
+import { sprintf } from "sprintf-js";
 
 export const data = new SlashCommandBuilder()
     .setName("place")
@@ -23,27 +25,54 @@ export const data = new SlashCommandBuilder()
         option
             .setName("amount")
             .setDescription("Amount to bet")
-            .setRequired(true)
             .setMinValue(1)
+            .setMaxValue(config.currency.usage.maxAmount)
     );
 
 export async function execute(command, services) {
     const symbol = command.options.getString("symbol", true);
-    const amount = command.options.getInteger("amount", true);
+    const amount = command.options.getInteger("amount", false) || 1;
 
-    await command.deferReply();
+    await handlePlace(command, services, [symbol, amount]);
+}
+
+export async function handlePlace(request, services, args) {
+    const usage = `${config.command.prefix} place <symbol> [amount]`;
+
+    if (args.length < 1 || args.length > 2) {
+        request.reply(sprintf(error.INVALID_COMMAND_USAGE, usage));
+        return;
+    }
+
     try {
+        const symbol = TokenUtils.getString(args[0], [
+            "stag",
+            "calabash",
+            "cock",
+            "fish",
+            "crab",
+            "prawn",
+        ]);
+        const amount =
+            args.length > 1
+                ? TokenUtils.getInteger(
+                      args[1],
+                      1,
+                      config.currency.usage.maxAmount
+                  )
+                : 1;
+
         await services.baucuaService.placeBet(
-            command.channelId,
-            command.user.id,
+            request.channelId,
+            request.user.id,
             symbol,
             amount
         );
 
-        await command.editReply(
+        await request.reply(
             `You placed a bet of ${amount} ${config.currency.symbol} on ${symbol}`
         );
     } catch (err) {
-        await command.editReply(getErrorMessage(err));
+        await request.reply(getErrorMessage(err));
     }
 }

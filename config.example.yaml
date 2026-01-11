@@ -18,7 +18,11 @@ supabase:
     url: https://YOUR_SUPABASE_PROJECT.supabase.co
     apiKey: sb_publishable_YOUR_SUPABASE_API_KEY
 
-commands:
+command:
+    prefix: uhe
+    usage:
+        minAmount: -1000000000
+        maxAmount: 1000000000
     admin:
         - add
 

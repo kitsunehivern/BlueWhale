@@ -4,25 +4,20 @@ export class MessageClassifier {
         this.historyService = services.historyService;
     }
 
-    async classifyMessage(botMessage) {
-        let result = await this.#fastClassify(botMessage);
+    async classifyMessage(message) {
+        let result = await this.#fastClassify(message);
         if (result === null) {
-            result = await this.#aiClassify(botMessage);
+            result = await this.#aiClassify(message);
         }
 
         return result;
     }
 
-    async #fastClassify(botMessage) {
-        const text = botMessage.getCleanContent().toLowerCase();
-        if (text.startsWith("=")) {
-            return "math";
-        }
-
+    async #fastClassify(message) {
         return null;
     }
 
-    async #aiClassify(botMessage) {
+    async #aiClassify(message) {
         return "chat";
     }
 }

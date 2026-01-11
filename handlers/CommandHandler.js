@@ -7,26 +7,19 @@ export class CommandHandler {
     }
 
     async handle(command) {
-        console.log(`[${command.commandName}] ${command.preview()}`);
+        console.log(command.preview());
 
         const cmd = client.slashCommands.get(command.commandName);
         if (!cmd) {
             return;
         }
 
+        await command.sendTyping();
         try {
             await cmd.execute(command, this.services);
         } catch (err) {
-            console.error("Error handling command", err);
-            try {
-                if (command.deferred || command.replied) {
-                    await command.editReply("...");
-                } else {
-                    await command.reply("...");
-                }
-            } catch (replyErr) {
-                console.error("Failed to reply to command error", replyErr);
-            }
+            console.log("Error handling command:", err);
+            await command.reply("...");
         }
     }
 }

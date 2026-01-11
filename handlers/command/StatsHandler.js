@@ -1,18 +1,31 @@
+import config from "../../config.js";
 import { SlashCommandBuilder } from "discord.js";
-import { getErrorMessage } from "../../consts/error.js";
+import { error, getErrorMessage } from "../../consts/error.js";
+import { TokenUtils } from "../../utils/TokenUtils.js";
+import { sprintf } from "sprintf-js";
 
 export const data = new SlashCommandBuilder()
     .setName("stats")
     .setDescription("Show bầu cua statistics");
 
 export async function execute(command, services) {
-    await command.deferReply();
+    await handleStats(command, services, []);
+}
+
+export async function handleStats(request, services, args) {
+    const usage = `${config.command.prefix} stats`;
+
+    if (args.length != 0) {
+        request.reply(sprintf(error.INVALID_COMMAND_USAGE, usage));
+        return;
+    }
+
     try {
         const stats = await services.baucuaService.getStats();
         const embed = services.baucuaService.buildStatsEmbed(stats);
 
-        await command.editReply(" ", { embeds: [embed] });
+        await request.reply(" ", { embeds: [embed] });
     } catch (error) {
-        await command.editReply(getErrorMessage(error));
+        await request.reply(getErrorMessage(error));
     }
 }
