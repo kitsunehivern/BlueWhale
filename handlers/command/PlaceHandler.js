@@ -18,15 +18,15 @@ export const data = new SlashCommandBuilder()
                 { name: "Gà", value: "cock" },
                 { name: "Cá", value: "fish" },
                 { name: "Cua", value: "crab" },
-                { name: "Tôm", value: "prawn" }
-            )
+                { name: "Tôm", value: "prawn" },
+            ),
     )
     .addIntegerOption((option) =>
         option
             .setName("amount")
             .setDescription("Amount to bet")
             .setMinValue(1)
-            .setMaxValue(config.currency.usage.maxAmount)
+            .setMaxValue(config.currency.usage.maxAmount),
     );
 
 export async function execute(command, services) {
@@ -58,7 +58,7 @@ export async function handlePlace(request, services, args) {
                 ? TokenUtils.getInteger(
                       args[1],
                       1,
-                      config.currency.usage.maxAmount
+                      config.currency.usage.maxAmount,
                   )
                 : 1;
 
@@ -66,11 +66,11 @@ export async function handlePlace(request, services, args) {
             request.channelId,
             request.user.id,
             symbol,
-            amount
+            amount,
         );
 
         await request.reply(
-            `You placed a bet of ${amount} ${config.currency.symbol} on ${symbol}`
+            `You placed a bet of ${amount} ${config.currency.symbol} on ${symbol}`,
         );
     } catch (err) {
         await request.reply(getErrorMessage(err));

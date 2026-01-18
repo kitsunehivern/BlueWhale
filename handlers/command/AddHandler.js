@@ -11,7 +11,7 @@ export const data = new SlashCommandBuilder()
         option
             .setName("user")
             .setDescription("The user to add money to")
-            .setRequired(true)
+            .setRequired(true),
     )
     .addIntegerOption((option) =>
         option
@@ -19,12 +19,14 @@ export const data = new SlashCommandBuilder()
             .setDescription("The amount to add")
             .setRequired(true)
             .setMinValue(config.currency.usage.minAmount)
-            .setMaxValue(config.currency.usage.maxAmount)
+            .setMaxValue(config.currency.usage.maxAmount),
     );
 
 export async function execute(command, services) {
     const user = command.options.getUser("user", true);
     const amount = command.options.getInteger("amount", true);
+
+    await handleAdd(command, services, [`<@${user.id}>`, amount]);
 }
 
 export async function handleAdd(request, services, args) {
@@ -40,16 +42,16 @@ export async function handleAdd(request, services, args) {
         const amount = TokenUtils.getInteger(
             args[1],
             config.currency.usage.minAmount,
-            config.currency.usage.maxAmount
+            config.currency.usage.maxAmount,
         );
 
         const newBalance = await services.balanceService.addUserBalance(
             user.id,
-            amount
+            amount,
         );
 
         await request.reply(
-            `You added ${amount} ${config.currency.symbol} to <@${user.id}>'s balance, their new balance is ${newBalance} ${config.currency.symbol}`
+            `You added ${amount} ${config.currency.symbol} to <@${user.id}>'s balance, their new balance is ${newBalance} ${config.currency.symbol}`,
         );
     } catch (err) {
         await request.reply(getErrorMessage(err));
