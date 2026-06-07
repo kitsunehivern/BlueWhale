@@ -15,6 +15,8 @@ export class BalanceService {
     }
 
     async giveUserBalance(fromUserId, toUserId, amount) {
+        if (amount <= 0) throw new Error("AMOUNT_NON_POSITIVE");
+        if (fromUserId === toUserId) throw new Error("GIVE_SAME_USER");
         return this.userStore.giveBalance(fromUserId, toUserId, amount);
     }
 
@@ -28,9 +30,6 @@ export class BalanceService {
             config.currency.daily.maxAmount
         );
         const balance = await this.userStore.claimDailyBalance(userId, amount);
-        return {
-            amount,
-            balance,
-        };
+        return { amount, balance };
     }
 }

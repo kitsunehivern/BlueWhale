@@ -1,41 +1,25 @@
 import client from "../client.js";
-import { Message } from "../models/Message.js";
-import { LRUCache } from "lru-cache";
 
 export class HistoryService {
-    constructor() {
-        this.cache = new LRUCache({
-            max: 100,
-            ttl: 1000 * 60 * 60,
-            updateAgeOnGet: true,
-            updateAgeOnHas: true,
-        });
+    constructor(chatMessageStore) {
+        this.store = chatMessageStore;
     }
 
-    async getHistory(message) {
-        const channel = client.channels.cache.get(message.channelId);
-        let history = [message];
+    async getHistory(refMessageId) {
+        if (!refMessageId) return [];
         try {
-            while (message.referenceId != undefined) {
-                if (!this.cache.has(message.referenceId)) {
-                    const refMessage = await channel.messages.fetch(
-                        message.referenceId
-                    );
-
-                    const newMessage = new Message(refMessage);
-                    await newMessage.loadEmbeddings();
-                    this.cache.set(message.referenceId, newMessage);
-                }
-
-                message = this.cache.get(message.referenceId);
-                history.push(message);
-            }
+            return await this.store.getChain(refMessageId, client.user.id);
         } catch (err) {
-            console.log("Error fetching message history:", err);
+            console.log("Error fetching chat history:", err);
+            return [];
         }
+    }
 
-        history.reverse();
-
-        return history;
+    async saveMessage(messageId, userId, channelId, text, refMessageId = null) {
+        try {
+            await this.store.save(messageId, userId, channelId, text, refMessageId);
+        } catch (err) {
+            console.log("Error saving chat message:", err);
+        }
     }
 }

@@ -1,4 +1,3 @@
-import { sprintf } from "sprintf-js";
 import client from "../client.js";
 import { error } from "../consts/error.js";
 import { LRUCache } from "lru-cache";
@@ -13,9 +12,7 @@ export class TokenUtils {
 
     static getString(token, choices = null) {
         if (choices && !choices.includes(token)) {
-            throw new Error(
-                sprintf(error.INVALID_CHOICE, token, choices.join(", "))
-            );
+            throw new Error(error.INVALID_CHOICE(token, choices.join(", ")));
         }
 
         return token;
@@ -24,19 +21,15 @@ export class TokenUtils {
     static getInteger(token, minValue = null, maxValue = null) {
         const result = parseInt(token, 10);
         if (isNaN(result)) {
-            throw new Error(sprintf(error.INVALID_INTEGER, token));
+            throw new Error(error.INVALID_INTEGER(token));
         }
 
         if (minValue !== null && result < minValue) {
-            throw new Error(
-                sprintf(error.INVALID_GEQ_INTEGER, token, minValue)
-            );
+            throw new Error(error.INVALID_GEQ_INTEGER(token, minValue));
         }
 
         if (maxValue !== null && result > maxValue) {
-            throw new Error(
-                sprintf(error.INVALID_LEQ_INTEGER, token, maxValue)
-            );
+            throw new Error(error.INVALID_LEQ_INTEGER(token, maxValue));
         }
 
         return result;
@@ -46,7 +39,7 @@ export class TokenUtils {
         const pattern = /^<@!?(\d+)>$/;
         const match = token.match(pattern);
         if (!match) {
-            throw new Error(sprintf(error.INVALID_USER, token));
+            throw new Error(error.INVALID_USER(token));
         }
         const userId = match[1];
 
@@ -60,7 +53,7 @@ export class TokenUtils {
             TokenUtils.userCache.set(userId, user);
             return user;
         } catch (err) {
-            throw new Error(sprintf(error.USER_NOT_FOUND, token));
+            throw new Error(error.USER_NOT_FOUND(token));
         }
     }
 }

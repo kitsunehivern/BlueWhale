@@ -1,4 +1,5 @@
 env: dev
+timezone: Asia/Ho_Chi_Minh
 
 discord:
     adminIds:
@@ -14,22 +15,25 @@ gemini:
     failDuration: 60000
     maxRetries: 3
 
-supabase:
-    url: https://YOUR_SUPABASE_PROJECT.supabase.co
-    apiKey: sb_publishable_YOUR_SUPABASE_API_KEY
+mysql:
+    host: YOUR_MYSQL_HOST
+    port: 3306
+    user: YOUR_MYSQL_USER
+    password: YOUR_MYSQL_PASSWORD
+    database: YOUR_MYSQL_DATABASE
 
 command:
     prefix: uhe
-    usage:
-        minAmount: -1000000000
-        maxAmount: 1000000000
     admin:
         - add
 
 currency:
     symbol: 🐳
+    usage:
+        minAmount: -1000000000
+        maxAmount: 1000000000
     daily:
-        minAmount: -1000
+        minAmount: 500
         maxAmount: 1000
 
 game:

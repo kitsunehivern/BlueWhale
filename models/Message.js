@@ -21,23 +21,20 @@ export class Message {
         this.editedTimestamp = message.editedTimestamp;
         this.mentions = message.mentions
             ? {
-                  users: message.mentions.users.map((user) => user.id),
-                  roles: message.mentions.roles.map((role) => role.id),
+                  users: message.mentions.users.map((u) => u.id),
+                  roles: message.mentions.roles.map((r) => r.id),
                   everyone: message.mentions.everyone,
               }
             : undefined;
-        this.referenceId = message.reference
-            ? message.reference.messageId
-            : undefined;
-
+        this.referenceId = message.reference?.messageId;
+        this.attachments = message.attachments ?? null;
         this._originalMessage = message;
 
         if (this.isCommand()) {
             this.args = MessageUtils.tokenizeArgs(
                 this.cleanContent.slice(config.command.prefix.length)
             );
-            this.messageName =
-                this.args.length > 0 ? this.args[0].toLowerCase() : null;
+            this.messageName = this.args.length > 0 ? this.args[0].toLowerCase() : null;
         }
     }
 
@@ -45,37 +42,31 @@ export class Message {
         return this.botWasMentioned() || this.isCommand();
     }
 
-    async loadEmbeddings() {
-        await this._loadAttachments();
-        this._loadLinks();
-    }
-
-    getAttachments() {
-        return this.attachments || [];
-    }
-
-    getLinks() {
-        return this.links || [];
-    }
-
-    getCleanContent() {
-        return this.cleanContent;
-    }
-
-    getOriginalMessage() {
-        return this._originalMessage;
-    }
-
     botWasMentioned() {
         return this.mentions.users.includes(client.user.id);
     }
 
     isCommand() {
-        return this.getCleanContent().startsWith(config.command.prefix);
+        return this.cleanContent.startsWith(config.command.prefix);
     }
 
-    getBotMentionPattern(botUserId) {
-        return `<@${botUserId}>`;
+    async sendChatBubbles(messages) {
+        const sent = [];
+        for (let i = 0; i < messages.length; i++) {
+            await this._typingDelay(messages[i], i === 0);
+            const discordMsg =
+                i === 0
+                    ? await this._originalMessage.reply({
+                          content: messages[i],
+                          allowedMentions: { users: [], roles: [] },
+                      })
+                    : await this._originalMessage.channel.send({
+                          content: messages[i],
+                          allowedMentions: { users: [], roles: [] },
+                      });
+            sent.push(discordMsg);
+        }
+        return sent;
     }
 
     async reply(content, options = {}) {
@@ -83,135 +74,62 @@ export class Message {
         let lastMessage = this._originalMessage;
         for (let i = 0; i < chunks.length; i++) {
             await this.sendTyping();
-
-            if (!this.isCommand()) {
-                await new Promise((resolve) =>
-                    setTimeout(resolve, Math.min(chunks[i].length * 4, 8000))
-                );
-            }
-
             lastMessage = await lastMessage.reply({
                 content: chunks[i],
                 allowedMentions: { users: [], roles: [] },
                 ...(i === chunks.length - 1 ? options : {}),
             });
         }
-
         return lastMessage;
     }
 
     async send(content, options = {}) {
         const chunks = MessageUtils.formatMessage(content);
-        let lastMessage = this._originalMessage;
+        let lastMessage = null;
         for (let i = 0; i < chunks.length; i++) {
             await this.sendTyping();
-
-            if (!this.isCommand()) {
-                await new Promise((resolve) =>
-                    setTimeout(resolve, Math.min(chunks[i].length * 4, 8000))
-                );
-            }
-
-            if (i === 0) {
-                lastMessage = await this._originalMessage.channel.send({
-                    content: chunks[i],
-                    allowedMentions: { users: [], roles: [] },
-                    ...(i === chunks.length - 1 ? options : {}),
-                });
-            } else {
-                lastMessage = await this._originalMessage.channel.send({
-                    content: chunks[i],
-                    allowedMentions: { users: [], roles: [] },
-                    ...(i === chunks.length - 1 ? options : {}),
-                });
-            }
+            lastMessage = await this._originalMessage.channel.send({
+                content: chunks[i],
+                allowedMentions: { users: [], roles: [] },
+                ...(i === chunks.length - 1 ? options : {}),
+            });
         }
-
         return lastMessage;
     }
 
     async sendTyping() {
-        return await this._originalMessage.channel.sendTyping();
+        return this._originalMessage.channel.sendTyping();
     }
 
-    async _loadAttachments() {
-        if (this.attachments == null) {
-            this.attachments = await MessageUtils.getAttachments(
-                this._originalMessage
-            );
+    preview() {
+        const text = this.cleanContent.length > 100
+            ? `${this.cleanContent.slice(0, 100)}...`
+            : this.cleanContent;
+        return `[${this.messageName ?? "message"}] ${this.channelName}/${this.user.username}: ${text}`;
+    }
+
+    async _typingDelay(text, isFirst = true) {
+        const typeMs = Math.min(text.length * 40, 3000) + Math.random() * 400;
+        const thinkMs = isFirst
+            ? 400 + Math.random() * 600
+            : 100 + Math.random() * 250;
+        const total = Math.round(thinkMs + typeMs);
+
+        await this._originalMessage.channel.sendTyping();
+        if (total > 8000) {
+            await new Promise((r) => setTimeout(r, 7500));
+            await this._originalMessage.channel.sendTyping();
+            await new Promise((r) => setTimeout(r, total - 7500));
+        } else {
+            await new Promise((r) => setTimeout(r, total));
         }
-    }
-
-    _loadLinks() {
-        if (this.links == null) {
-            this.links = MessageUtils.getLinks(this._originalMessage);
-        }
-    }
-
-    _processAttachments(attachments) {
-        return attachments.map((attachment) => ({
-            id: attachment.id,
-            name: attachment.name,
-            url: attachment.url,
-            size: attachment.size,
-            type: this._getAttachmentType(attachment.contentType),
-            contentType: attachment.contentType,
-        }));
-    }
-
-    _getAttachmentType(contentType) {
-        if (!contentType) return "unknown";
-        if (contentType.startsWith("image/")) return "image";
-        if (contentType.startsWith("video/")) return "video";
-        if (contentType.startsWith("audio/")) return "audio";
-        return "file";
     }
 
     _cleanContent(content) {
         content = content.trim();
         if (content.startsWith(`<@${client.user.id}>`)) {
-            content = content.substring(`<@${client.user.id}>`.length).trim();
+            content = content.slice(`<@${client.user.id}>`.length).trim();
         }
-
         return content;
-    }
-
-    getAIAttachments() {
-        return this.getAttachments().map((img) => ({
-            inlineData: {
-                data: img.data.data.toString("base64"),
-                mimeType: img.type,
-            },
-        }));
-    }
-
-    getAILinks() {
-        return this.getLinks().map((link) => ({
-            fileData: {
-                fileUri: link.url,
-                mimeType: link.type,
-            },
-        }));
-    }
-
-    getAIFormat() {
-        return {
-            role: this.user.id === client.user.id ? "model" : "user",
-            parts: [
-                { text: this.cleanContent },
-                ...this.getAIAttachments(),
-                ...this.getAILinks(),
-            ],
-        };
-    }
-
-    preview() {
-        return `[message: ${this.messageName}] ${this.channelName}/${
-            this.user.username
-        }: ${
-            this.cleanContent.length > 100
-                ? `${this.cleanContent.substring(0, 100)}...`
-                : this.cleanContent
-        }`;
     }
 }

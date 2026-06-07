@@ -1,28 +1,18 @@
-import config from "../config.js";
 import client from "../client.js";
-import { EmbedBuilder } from "discord.js";
-
-const SYMBOLS = [
-    { key: "stag", label: "Nai" },
-    { key: "calabash", label: "Bầu" },
-    { key: "cock", label: "Gà" },
-    { key: "fish", label: "Cá" },
-    { key: "crab", label: "Cua" },
-    { key: "prawn", label: "Tôm" },
-];
+import { SYMBOLS } from "../consts/baucua.js";
+import * as BaucuaPresenter from "../presenters/BaucuaPresenter.js";
 
 export class BaucuaService {
     constructor(stores) {
-        this.baucuaStore = stores.baucuaStore;
+        this.store = stores.baucuaStore;
         this.timers = new Map();
     }
 
     async init() {
-        const games = await this.baucuaStore.listActiveGames();
+        const games = await this.store.findActiveGames();
         const now = Date.now();
         for (const game of games) {
-            const endsAt = new Date(game.ends_at).getTime();
-            if (endsAt <= now) {
+            if (new Date(game.ends_at).getTime() <= now) {
                 await this._refundAndUpdateMessage(game);
             } else {
                 await this._refreshGameMessage(game);
@@ -31,310 +21,166 @@ export class BaucuaService {
         }
     }
 
-    getSymbols() {
-        return SYMBOLS;
-    }
-
     async startGame(channelId, startedBy, durationSeconds) {
-        const gameId = await this.baucuaStore.startGame(
-            channelId,
-            startedBy,
-            durationSeconds
-        );
-        return this.baucuaStore.getGame(gameId);
+        const gameId = await this.store.createGame(channelId, startedBy, durationSeconds);
+        return this.store.findGame(gameId);
     }
 
     async attachGameMessage(gameId, messageId) {
-        await this.baucuaStore.setGameMessage(gameId, messageId);
-        const game = await this.baucuaStore.getGame(gameId);
+        await this.store.setGameMessage(gameId, messageId);
+        const game = await this.store.findGame(gameId);
         this._scheduleGameEnd(game);
         return game;
     }
 
     async placeBet(channelId, userId, symbol, amount) {
-        const game = await this.baucuaStore.getActiveGameByChannel(channelId);
-        if (!game) {
-            throw Error("BAUCUA_NO_ACTIVE_GAME");
-        }
+        const game = await this.store.findActiveGameByChannel(channelId);
+        if (!game) throw new Error("BAUCUA_NO_ACTIVE_GAME");
 
-        await this.baucuaStore.placeBet(game.id, userId, symbol, amount);
-        return this._refreshGameMessage(game);
-    }
+        await this.store.withTransaction(async (conn) => {
+            const locked = await this.store.lockGame(game.id, conn);
+            if (!locked || locked.status !== "active") throw new Error("BAUCUA_BETTING_CLOSED");
+            if (Date.now() >= new Date(locked.ends_at).getTime()) throw new Error("BAUCUA_BETTING_CLOSED");
 
-    async _refreshGameMessage(game) {
-        if (!client || !game.message_id) {
-            return;
-        }
+            await this.store.ensurePlayer(userId, conn);
+            const player = await this.store.lockPlayerBalance(userId, conn);
+            if (Number(player.balance) < amount) throw new Error("INSUFFICIENT_BALANCE");
 
-        const bets = await this.baucuaStore.listBets(game.id);
-        const embed = this.buildGameEmbed(game, bets);
+            await this.store.debitPlayer(userId, amount, conn);
+            await this.store.insertBet(game.id, userId, symbol, amount, conn);
+        });
 
-        const channel = await client.channels.fetch(game.channel_id);
-        if (!channel || !channel.isTextBased()) {
-            return;
-        }
-
-        const message = await channel.messages.fetch(game.message_id);
-        await message.edit({ embeds: [embed] });
-    }
-
-    _scheduleGameEnd(game) {
-        const endsAt = new Date(game.ends_at).getTime();
-        const delay = Math.max(0, endsAt - Date.now() + 500);
-
-        if (this.timers.has(game.id)) {
-            clearTimeout(this.timers.get(game.id));
-        }
-
-        const timer = setTimeout(async () => {
-            try {
-                await this.finishGame(game.id);
-            } catch (e) {
-                console.log("Failed to finish baucua game", e);
-            }
-        }, delay);
-
-        this.timers.set(game.id, timer);
+        await this._refreshGameMessage(game);
     }
 
     async finishGame(gameId) {
-        const game = await this.baucuaStore.getGame(gameId);
+        const game = await this.store.findGame(gameId);
         if (!game || game.status !== "active") {
+            this._clearTimer(gameId);
             return;
         }
 
         const dices = this.rollDice();
-        const summary = await this.baucuaStore.settleGame(gameId, dices);
-        const bets = await this.baucuaStore.listBets(gameId);
 
-        if (client && game.message_id) {
-            const embed = this.buildResultEmbed(game, bets, dices, summary);
+        const { bets, summary } = await this.store.withTransaction(async (conn) => {
+            const locked = await this.store.lockGame(gameId, conn);
+            if (!locked || locked.status !== "active") return { bets: [], summary: [] };
 
-            const channel = await client.channels.fetch(game.channel_id);
-            if (channel && channel.isTextBased()) {
-                const message = await channel.messages.fetch(game.message_id);
-                await message.edit({ embeds: [embed] });
+            const bets = await this.store.findBets(gameId, conn);
+            const settlements = this._computeSettlements(bets, dices);
+
+            await this.store.markSettled(gameId, dices, conn);
+
+            const summary = [];
+            for (const [userId, { credit, net }] of Object.entries(settlements)) {
+                if (credit > 0) await this.store.creditPlayer(userId, credit, conn);
+                summary.push({ user_id: userId, net_change: net });
+            }
+
+            return { bets, summary };
+        });
+
+        this._clearTimer(gameId);
+
+        if (game.message_id) {
+            const embed = BaucuaPresenter.buildResultEmbed(game, bets, dices, summary);
+            await this._editGameMessage(game, (_, msg) => msg.edit({ embeds: [embed] }));
+        }
+    }
+
+    rollDice() {
+        const keys = SYMBOLS.map((s) => s.key);
+        return Array.from({ length: 3 }, () => keys[Math.floor(Math.random() * keys.length)]);
+    }
+
+    _computeSettlements(bets, dices) {
+        const diceCounts = {};
+        for (const die of dices) diceCounts[die] = (diceCounts[die] || 0) + 1;
+
+        const settlements = {};
+        for (const bet of bets) {
+            const matchCount = diceCounts[bet.symbol] || 0;
+            if (!settlements[bet.user_id]) settlements[bet.user_id] = { credit: 0, net: 0 };
+
+            if (matchCount > 0) {
+                settlements[bet.user_id].credit += Number(bet.amount) * (1 + matchCount);
+                settlements[bet.user_id].net   += Number(bet.amount) * matchCount;
+            } else {
+                settlements[bet.user_id].net   -= Number(bet.amount);
+            }
+        }
+        return settlements;
+    }
+
+    async getStats() {
+        const { gamesRow, betsRow, diceRows } = await this.store.queryStats();
+
+        const faceCounts = { stag: 0, calabash: 0, cock: 0, fish: 0, crab: 0, prawn: 0 };
+        for (const row of diceRows) {
+            const faces = typeof row.dices === "string" ? JSON.parse(row.dices) : row.dices;
+            for (const face of faces) {
+                if (face in faceCounts) faceCounts[face]++;
             }
         }
 
+        return { games: Number(gamesRow.games), bets: Number(betsRow.bets), ...faceCounts };
+    }
+
+    _scheduleGameEnd(game) {
+        this._clearTimer(game.id);
+        const delay = Math.max(0, new Date(game.ends_at).getTime() - Date.now() + 500);
+        const timer = setTimeout(async () => {
+            try { await this.finishGame(game.id); }
+            catch (e) { console.error("Failed to finish baucua game", e); }
+        }, delay);
+        this.timers.set(game.id, timer);
+    }
+
+    _clearTimer(gameId) {
         if (this.timers.has(gameId)) {
             clearTimeout(this.timers.get(gameId));
             this.timers.delete(gameId);
         }
     }
 
+    async _refreshGameMessage(game) {
+        if (!game.message_id) return;
+        const bets = await this.store.findBets(game.id);
+        const embed = BaucuaPresenter.buildGameEmbed(game, bets);
+        await this._editGameMessage(game, (_, msg) => msg.edit({ embeds: [embed] }));
+    }
+
     async _refundAndUpdateMessage(game) {
         try {
-            await this.baucuaStore.refundGame(game.id);
-        } catch (e) {
-            console.warn("Refund baucua game failed", e);
-        }
+            await this.store.withTransaction(async (conn) => {
+                const locked = await this.store.lockGame(game.id, conn);
+                if (!locked || locked.status !== "active") return;
 
-        if (!client || !game.message_id) {
-            return;
-        }
+                await this.store.markRefunded(game.id, conn);
 
-        const bets = await this.baucuaStore.listBets(game.id);
-        const embed = this.buildRefundedEmbed(game, bets);
-
-        const channel = await client.channels.fetch(game.channel_id);
-        if (!channel || !channel.isTextBased()) {
-            return;
-        }
-
-        const message = await channel.messages.fetch(game.message_id);
-        await message.edit({ embeds: [embed] });
-    }
-
-    rollDice() {
-        const keys = SYMBOLS.map((a) => a.key);
-        const dices = [];
-        for (let i = 0; i < 3; i++) {
-            dices.push(keys[Math.floor(Math.random() * keys.length)]);
-        }
-        return dices;
-    }
-
-    buildGameEmbed(game, bets) {
-        const endsAt = Math.floor(new Date(game.ends_at).getTime() / 1000);
-        const betMap = this._groupBets(bets);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x0000ff)
-            .setTitle("Bầu cua")
-            .setDescription(
-                `Place bets with \`/place <symbol> <amount>\`. Round ends <t:${endsAt}:R>\n${this._buildSeperator()}`
-            )
-            .setFooter({ text: `Channel: ${game.channel_id}` });
-
-        for (const symbol of SYMBOLS) {
-            embed.addFields(this._renderSymbolField(symbol, betMap));
-        }
-
-        return embed;
-    }
-
-    buildResultEmbed(game, bets, dice, summaryRows) {
-        const betMap = this._groupBets(bets);
-        const diceLabels = dice
-            .map((k) => SYMBOLS.find((a) => a.key === k)?.label || k)
-            .join(", ");
-
-        const embed = new EmbedBuilder()
-            .setColor(0x00ff00)
-            .setTitle("Bầu cua - Result")
-            .setDescription(
-                `
-**Dice**: ${diceLabels}
-**Payouts**:
-${this._renderSummary(summaryRows)}
-${this._buildSeperator()}
-                `.trim()
-            );
-
-        for (const symbol of SYMBOLS) {
-            embed.addFields(this._renderSymbolField(symbol, betMap));
-        }
-
-        return embed;
-    }
-
-    buildRefundedEmbed(game, bets) {
-        const betMap = this._groupBets(bets);
-
-        const embed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle("Bầu cua - Refunded")
-            .setDescription(
-                `This game was refunded due to bot restart/crash. All placed bets were returned.\n${this._buildSeperator()}`
-            );
-
-        for (const symbol of SYMBOLS) {
-            embed.addFields(this._renderSymbolField(symbol, betMap));
-        }
-
-        return embed;
-    }
-
-    _groupBets(bets) {
-        const betMap = new Map();
-        for (const b of bets) {
-            if (!betMap.has(b.symbol)) {
-                betMap.set(b.symbol, new Map());
-            }
-            const m = betMap.get(b.symbol);
-            m.set(b.user_id, (m.get(b.user_id) || 0) + Number(b.amount));
-        }
-
-        return betMap;
-    }
-
-    _renderSymbolField(symbol, betMap) {
-        const userToAmount = betMap.get(symbol.key) || new Map();
-        return {
-            name: `${symbol.label}`,
-            value: this._renderUserBetList(userToAmount),
-            inline: true,
-        };
-    }
-
-    _renderUserBetList(userToAmount) {
-        const entries = [...userToAmount.entries()].sort((a, b) => b[1] - a[1]);
-        if (entries.length === 0) {
-            return "-";
-        }
-
-        const maxLines = 12;
-        const shown = entries.slice(0, maxLines);
-        const lines = shown.map(
-            ([userId, amount]) =>
-                `<@${userId}> ${Number(amount)} ${config.currency.symbol}`
-        );
-
-        if (entries.length > maxLines) {
-            lines.push(`...and ${entries.length - maxLines} more`);
-        }
-
-        return lines.join("\n");
-    }
-
-    _renderSummary(rows) {
-        if (!rows || rows.length === 0) {
-            return "No bets";
-        }
-
-        const lines = rows
-            .sort((a, b) => Number(b.net_change) - Number(a.net_change))
-            .map((r) => {
-                const net = Number(r.net_change);
-                const sign = net >= 0 ? "+" : "";
-                return `<@${r.user_id}> ${sign}${net} ${config.currency.symbol}`;
-            });
-
-        return lines.slice(0, 30).join("\n");
-    }
-
-    async getStats() {
-        return this.baucuaStore.getStats();
-    }
-
-    async getStats() {
-        return this.baucuaStore.getStats();
-    }
-
-    buildStatsEmbed(stats) {
-        const embed = new EmbedBuilder()
-            .setTitle("Bầu cua - Statistics")
-            .setDescription("Scope: **all servers**")
-            .addFields(
-                {
-                    name: "Games",
-                    value: `${Number(stats.games || 0)}`,
-                    inline: true,
-                },
-                {
-                    name: "Bets",
-                    value: `${Number(stats.bets || 0)}`,
-                    inline: true,
-                },
-                { name: "\u200B", value: "\u200B", inline: true },
-
-                {
-                    name: "Nai",
-                    value: `${Number(stats.stag || 0)}`,
-                    inline: true,
-                },
-                {
-                    name: "Bầu",
-                    value: `${Number(stats.calabash || 0)}`,
-                    inline: true,
-                },
-                {
-                    name: "Gà",
-                    value: `${Number(stats.cock || 0)}`,
-                    inline: true,
-                },
-                {
-                    name: "Cá",
-                    value: `${Number(stats.fish || 0)}`,
-                    inline: true,
-                },
-                {
-                    name: "Cua",
-                    value: `${Number(stats.crab || 0)}`,
-                    inline: true,
-                },
-                {
-                    name: "Tôm",
-                    value: `${Number(stats.prawn || 0)}`,
-                    inline: true,
+                const refunds = await this.store.findBetTotalsByUser(game.id, conn);
+                for (const row of refunds) {
+                    await this.store.creditPlayer(row.user_id, Number(row.total), conn);
                 }
-            );
+            });
+        } catch (e) {
+            console.warn("Refund failed for game", game.id, e);
+        }
 
-        return embed;
+        if (!game.message_id) return;
+        const bets = await this.store.findBets(game.id);
+        const embed = BaucuaPresenter.buildRefundedEmbed(game, bets);
+        await this._editGameMessage(game, (_, msg) => msg.edit({ embeds: [embed] }));
     }
 
-    _buildSeperator() {
-        return "-".repeat(80);
+    async _editGameMessage(game, fn) {
+        try {
+            const channel = await client.channels.fetch(game.channel_id);
+            if (!channel?.isTextBased()) return;
+            const message = await channel.messages.fetch(game.message_id);
+            await fn(channel, message);
+        } catch (e) {
+            console.warn("Failed to edit game message", e);
+        }
     }
 }
