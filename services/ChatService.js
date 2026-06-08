@@ -4,7 +4,7 @@ import keyManager from "../utils/KeyManager.js";
 
 export class ChatService {
     constructor(instruction) {
-        this.model = config.gemini.apiModel || "gemini-2.5-flash";
+        this.model = config.gemini.chatModel || "gemini-2.5-flash";
         this.systemInstruction =
             instruction ||
             "You are a friendly, concise Discord chat bot. Reply in a casual style.";
@@ -64,6 +64,37 @@ export class ChatService {
 
         const fallback = String(response.text || "").trim();
         return fallback ? [fallback] : ["..."];
+    }
+
+    async summarizeMemories(userName, facts) {
+        const apiKey = keyManager.next();
+        if (!apiKey) return facts.slice(0, 10);
+
+        const model = config.gemini.memoryModel || "gemini-2.0-flash-lite";
+        const prompt =
+            `The following are all known facts about ${userName}. ` +
+            `Compress them into 5-10 concise, distinct facts that preserve the most important information. ` +
+            `Merge related facts. Drop trivial or redundant ones. One sentence per fact.\n\n` +
+            facts.map((f, i) => `${i + 1}. ${f}`).join("\n");
+
+        try {
+            const ai = new GoogleGenAI({ apiKey });
+            const response = await ai.models.generateContent({
+                model,
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: { type: "array", items: { type: "string" } },
+                },
+            });
+            keyManager.markSuccess(apiKey);
+            const parsed = JSON.parse(response.text || "[]");
+            return Array.isArray(parsed) && parsed.length > 0
+                ? parsed.filter(Boolean)
+                : facts.slice(0, 10);
+        } catch {
+            return facts.slice(0, 10);
+        }
     }
 
     async extractMemories(userName, history, existingFacts = []) {

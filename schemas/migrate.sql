@@ -36,8 +36,9 @@ CREATE TABLE IF NOT EXISTS user_memories (
     id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id    VARCHAR(64)  NOT NULL,
     fact       TEXT         NOT NULL,
+    deleted_at DATETIME     NULL DEFAULT NULL,
     created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_memory_user (user_id)
+    INDEX idx_memory_user_active (user_id, deleted_at)
 );
 
 CREATE TABLE IF NOT EXISTS chat_messages (

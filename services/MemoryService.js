@@ -13,6 +13,18 @@ export class MemoryService {
         const newFacts = await this.chatService.extractMemories(userName, history, existingFacts);
         if (newFacts.length > 0) {
             await this.store.addFacts(userId, newFacts);
+            await this._compressIfNeeded(userId, userName);
+        }
+    }
+
+    async _compressIfNeeded(userId, userName) {
+        const count = await this.store.getActiveCount(userId);
+        if (count <= 25) return;
+
+        const allFacts = await this.store.findByUser(userId);
+        const summary = await this.chatService.summarizeMemories(userName, allFacts);
+        if (summary.length > 0) {
+            await this.store.compress(userId, summary);
         }
     }
 }
