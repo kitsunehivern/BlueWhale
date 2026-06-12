@@ -12,6 +12,7 @@ gemini:
         - YOUR_GEMINI_API_KEY_1
         - YOUR_GEMINI_API_KEY_2
     chatModel: gemini-2.5-flash
+    searchModel: gemini-2.5-flash-lite
     memoryModel: gemini-2.5-flash-lite
     failDuration: 60000
     maxRetries: 3

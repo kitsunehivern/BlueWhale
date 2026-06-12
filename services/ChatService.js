@@ -4,7 +4,9 @@ import keyManager from "../utils/KeyManager.js";
 
 export class ChatService {
     constructor(instruction) {
-        this.model = config.gemini.chatModel || "gemini-2.5-flash";
+        this.model = config.gemini.chatModel || "gemini-2.5-flash-lite";
+        this.searchModel = config.gemini.searchModel || "gemini-2.5-flash";
+        this.memoryModel = config.gemini.memoryModel || "gemini-2.5-flash-lite";
         this.systemInstruction =
             instruction ||
             "You are a friendly, concise Discord chat bot. Reply in a casual style.";
@@ -32,15 +34,18 @@ export class ChatService {
             ? `${this.systemInstruction}\n\n${contextSection}`
             : this.systemInstruction;
 
+        const draftText = await this._generateWithSearch(contents, systemInstruction);
+
+        const enrichedInstruction = draftText
+            ? `${systemInstruction}\n\n[Search-grounded answer for current message]\n${draftText}`
+            : systemInstruction;
+
         const request = {
             model: this.model,
             contents,
             config: {
-                systemInstruction: systemInstruction
-                    ? {
-                          role: "system",
-                          parts: [{ text: systemInstruction }],
-                      }
+                systemInstruction: enrichedInstruction
+                    ? { role: "system", parts: [{ text: enrichedInstruction }] }
                     : undefined,
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -70,7 +75,6 @@ export class ChatService {
         const apiKey = keyManager.next();
         if (!apiKey) return facts.slice(0, 10);
 
-        const model = config.gemini.memoryModel || "gemini-2.0-flash-lite";
         const prompt =
             `The following are all known facts about ${userName}. ` +
             `Compress them into 5-10 concise, distinct facts that preserve the most important information. ` +
@@ -80,7 +84,7 @@ export class ChatService {
         try {
             const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
-                model,
+                model: this.memoryModel,
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
                 config: {
                     responseMimeType: "application/json",
@@ -127,7 +131,7 @@ export class ChatService {
         try {
             const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
-                model: this.model,
+                model: this.memoryModel,
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
                 config: {
                     responseMimeType: "application/json",
@@ -140,6 +144,42 @@ export class ChatService {
         } catch {
             return [];
         }
+    }
+
+    async _generateWithSearch(contents, systemInstruction) {
+        for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+            const apiKey = keyManager.next();
+            if (!apiKey) {
+                console.warn("[chat] no active Gemini keys for search step");
+                return null;
+            }
+
+            try {
+                const ai = new GoogleGenAI({ apiKey });
+                const response = await ai.models.generateContent({
+                    model: this.searchModel,
+                    contents,
+                    config: {
+                        systemInstruction: systemInstruction
+                            ? { role: "system", parts: [{ text: systemInstruction }] }
+                            : undefined,
+                        tools: [{ googleSearch: {} }],
+                    },
+                });
+                keyManager.markSuccess(apiKey);
+                return response.text?.trim() || null;
+            } catch (err) {
+                if (_isAuthError(err)) {
+                    keyManager.markDead(apiKey);
+                } else {
+                    keyManager.markFailed(apiKey);
+                    console.warn(`[chat] search step error (attempt ${attempt + 1}):`, err.message);
+                }
+            }
+        }
+
+        console.warn("[chat] search step failed after retries, proceeding without grounding");
+        return null;
     }
 
     async _generateWithRetries(request) {
