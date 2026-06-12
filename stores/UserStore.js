@@ -122,4 +122,57 @@ export class UserStore {
             return Number(updated.balance);
         });
     }
+
+    async steal(userId) {
+        const [targets] = await this.db.execute(
+            "SELECT user_id FROM players WHERE balance > 0 AND user_id != ? ORDER BY RAND() LIMIT 1",
+            [userId]
+        );
+        if (!targets.length) throw new Error("STEAL_NO_TARGET");
+        const targetId = targets[0].user_id;
+
+        return this.withTransaction(async (conn) => {
+            await conn.execute(
+                "INSERT INTO players (user_id) VALUES (?) ON DUPLICATE KEY UPDATE user_id = user_id",
+                [userId]
+            );
+
+            const [first, second] = [userId, targetId].sort();
+            await conn.execute("SELECT balance FROM players WHERE user_id = ? FOR UPDATE", [first]);
+            await conn.execute("SELECT balance FROM players WHERE user_id = ? FOR UPDATE", [second]);
+
+            const [[thief]] = await conn.execute(
+                "SELECT steal_claimed_at FROM players WHERE user_id = ?",
+                [userId]
+            );
+            const lastSteal = thief.steal_claimed_at ? new Date(thief.steal_claimed_at) : new Date(0);
+            if (lastSteal.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)) {
+                throw new Error("STEAL_ALREADY_CLAIMED");
+            }
+
+            const [[victim]] = await conn.execute(
+                "SELECT balance FROM players WHERE user_id = ?",
+                [targetId]
+            );
+            if (!victim || Number(victim.balance) <= 0) throw new Error("STEAL_NO_TARGET");
+
+            const maxSteal = Math.max(1, Math.floor(Number(victim.balance) * 0.5));
+            const amount = Math.floor(Math.random() * maxSteal) + 1;
+
+            await conn.execute(
+                "UPDATE players SET balance = balance - ? WHERE user_id = ?",
+                [amount, targetId]
+            );
+            await conn.execute(
+                "UPDATE players SET balance = balance + ?, steal_claimed_at = UTC_TIMESTAMP() WHERE user_id = ?",
+                [amount, userId]
+            );
+
+            const [[updated]] = await conn.execute(
+                "SELECT balance FROM players WHERE user_id = ?",
+                [userId]
+            );
+            return { targetId, amount, newBalance: Number(updated.balance) };
+        });
+    }
 }

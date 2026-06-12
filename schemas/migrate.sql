@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS players (
     user_id          VARCHAR(64)  NOT NULL UNIQUE,
     balance          BIGINT       NOT NULL DEFAULT 0,
     daily_claimed_at DATETIME     NOT NULL DEFAULT '1970-01-01 00:00:00',
+    steal_claimed_at DATETIME     NOT NULL DEFAULT '1970-01-01 00:00:00',
     created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

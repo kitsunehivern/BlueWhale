@@ -24,6 +24,10 @@ export class BalanceService {
         return this.userStore.getRichestUsers(limit);
     }
 
+    async stealBalance(userId) {
+        return this.userStore.steal(userId);
+    }
+
     async claimDailyBalance(userId) {
         const amount = HelperUtils.getRandomInt(
             config.currency.daily.minAmount,
